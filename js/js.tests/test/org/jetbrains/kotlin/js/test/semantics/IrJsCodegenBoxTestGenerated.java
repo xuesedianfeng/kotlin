@@ -1536,6 +1536,32 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
                 runTest("compiler/testData/codegen/box/builtinStubMethods/extendJavaCollections/hashSet.kt");
             }
         }
+
+        @TestMetadata("compiler/testData/codegen/box/builtinStubMethods/mapGetOrDefault")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class MapGetOrDefault extends AbstractIrJsCodegenBoxTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInMapGetOrDefault() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/builtinStubMethods/mapGetOrDefault"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS_IR, true);
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/builtinStubMethods/mapRemove")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class MapRemove extends AbstractIrJsCodegenBoxTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInMapRemove() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/builtinStubMethods/mapRemove"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS_IR, true);
+            }
+        }
     }
 
     @TestMetadata("compiler/testData/codegen/box/callableReference")
@@ -7109,6 +7135,71 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
         }
     }
 
+    @TestMetadata("compiler/testData/codegen/box/defaults")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Defaults extends AbstractIrJsCodegenBoxTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInDefaults() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/defaults"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS_IR, true);
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/defaults/delegationBy")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class DelegationBy extends AbstractIrJsCodegenBoxTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInDelegationBy() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/defaults/delegationBy"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS_IR, true);
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/defaults/interfaceFlag")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class InterfaceFlag extends AbstractIrJsCodegenBoxTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInInterfaceFlag() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/defaults/interfaceFlag"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS_IR, true);
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/defaults/noDelegation")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class NoDelegation extends AbstractIrJsCodegenBoxTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInNoDelegation() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/defaults/noDelegation"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS_IR, true);
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/defaults/reflection")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Reflection extends AbstractIrJsCodegenBoxTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInReflection() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/defaults/reflection"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS_IR, true);
+            }
+        }
+    }
+
     @TestMetadata("compiler/testData/codegen/box/delegatedProperty")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -7518,11 +7609,6 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
 
         public void testAllFilesPresentInDelegation() throws Exception {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/delegation"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS_IR, true);
-        }
-
-        @TestMetadata("delegationToVal.kt")
-        public void testDelegationToVal() throws Exception {
-            runTest("compiler/testData/codegen/box/delegation/delegationToVal.kt");
         }
 
         @TestMetadata("delegationWithPrivateConstructor.kt")
@@ -10724,6 +10810,130 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
         public void testKt1397() throws Exception {
             runTest("compiler/testData/codegen/box/jdk/kt1397.kt");
         }
+
+        @TestMetadata("streamBackwardCompatibility.kt")
+        public void testStreamBackwardCompatibility() throws Exception {
+            runTest("compiler/testData/codegen/box/jdk/streamBackwardCompatibility.kt");
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/box/jvm8")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Jvm8 extends AbstractIrJsCodegenBoxTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInJvm8() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/jvm8"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS_IR, true);
+        }
+
+        @TestMetadata("bridgeInClass.kt")
+        public void testBridgeInClass() throws Exception {
+            runTest("compiler/testData/codegen/box/jvm8/bridgeInClass.kt");
+        }
+
+        @TestMetadata("bridgeInInterface.kt")
+        public void testBridgeInInterface() throws Exception {
+            runTest("compiler/testData/codegen/box/jvm8/bridgeInInterface.kt");
+        }
+
+        @TestMetadata("defaultArgs.kt")
+        public void testDefaultArgs() throws Exception {
+            runTest("compiler/testData/codegen/box/jvm8/defaultArgs.kt");
+        }
+
+        @TestMetadata("inlineFromAnotherFile.kt")
+        public void testInlineFromAnotherFile() throws Exception {
+            runTest("compiler/testData/codegen/box/jvm8/inlineFromAnotherFile.kt");
+        }
+
+        @TestMetadata("inlineFromStdlib.kt")
+        public void testInlineFromStdlib() throws Exception {
+            runTest("compiler/testData/codegen/box/jvm8/inlineFromStdlib.kt");
+        }
+
+        @TestMetadata("kt11969.kt")
+        public void testKt11969() throws Exception {
+            runTest("compiler/testData/codegen/box/jvm8/kt11969.kt");
+        }
+
+        @TestMetadata("kt14243.kt")
+        public void testKt14243() throws Exception {
+            runTest("compiler/testData/codegen/box/jvm8/kt14243.kt");
+        }
+
+        @TestMetadata("kt14243_2.kt")
+        public void testKt14243_2() throws Exception {
+            runTest("compiler/testData/codegen/box/jvm8/kt14243_2.kt");
+        }
+
+        @TestMetadata("kt14243_prop.kt")
+        public void testKt14243_prop() throws Exception {
+            runTest("compiler/testData/codegen/box/jvm8/kt14243_prop.kt");
+        }
+
+        @TestMetadata("kt16581.kt")
+        public void testKt16581() throws Exception {
+            runTest("compiler/testData/codegen/box/jvm8/kt16581.kt");
+        }
+
+        @TestMetadata("kt16581_2.kt")
+        public void testKt16581_2() throws Exception {
+            runTest("compiler/testData/codegen/box/jvm8/kt16581_2.kt");
+        }
+
+        @TestMetadata("kt16588.kt")
+        public void testKt16588() throws Exception {
+            runTest("compiler/testData/codegen/box/jvm8/kt16588.kt");
+        }
+
+        @TestMetadata("oneImplementation.kt")
+        public void testOneImplementation() throws Exception {
+            runTest("compiler/testData/codegen/box/jvm8/oneImplementation.kt");
+        }
+
+        @TestMetadata("oneImplementation2.kt")
+        public void testOneImplementation2() throws Exception {
+            runTest("compiler/testData/codegen/box/jvm8/oneImplementation2.kt");
+        }
+
+        @TestMetadata("simpleCall.kt")
+        public void testSimpleCall() throws Exception {
+            runTest("compiler/testData/codegen/box/jvm8/simpleCall.kt");
+        }
+
+        @TestMetadata("simpleProperty.kt")
+        public void testSimpleProperty() throws Exception {
+            runTest("compiler/testData/codegen/box/jvm8/simpleProperty.kt");
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/jvm8/defaults")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Defaults extends AbstractIrJsCodegenBoxTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInDefaults() throws Exception {
+                KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/jvm8/defaults"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS_IR, true);
+            }
+
+            @TestMetadata("compiler/testData/codegen/box/jvm8/defaults/compatibility")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class Compatibility extends AbstractIrJsCodegenBoxTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInCompatibility() throws Exception {
+                    KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/jvm8/defaults/compatibility"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS_IR, true);
+                }
+            }
+        }
     }
 
     @TestMetadata("compiler/testData/codegen/box/jvmField")
@@ -12790,6 +13000,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/optimizations"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS_IR, true);
         }
 
+        @TestMetadata("hashCode.kt")
+        public void testHashCode() throws Exception {
+            runTest("compiler/testData/codegen/box/optimizations/hashCode.kt");
+        }
+
         @TestMetadata("kt20844.kt")
         public void testKt20844() throws Exception {
             runTest("compiler/testData/codegen/box/optimizations/kt20844.kt");
@@ -12866,6 +13081,19 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
         @TestMetadata("referenceWithTheSameNameAsPackage.kt")
         public void testReferenceWithTheSameNameAsPackage() throws Exception {
             runTest("compiler/testData/codegen/box/package/referenceWithTheSameNameAsPackage.kt");
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/box/parametersMetadata")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class ParametersMetadata extends AbstractIrJsCodegenBoxTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS_IR, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInParametersMetadata() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/parametersMetadata"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS_IR, true);
         }
     }
 
