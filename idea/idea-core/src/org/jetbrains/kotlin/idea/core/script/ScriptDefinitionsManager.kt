@@ -64,7 +64,7 @@ import kotlin.script.templates.standard.ScriptTemplateWithArgs
 
 class ScriptDefinitionsManager(private val project: Project) : LazyScriptDefinitionProvider() {
     private var definitionsByContributor = mutableMapOf<ScriptDefinitionContributor, List<KotlinScriptDefinition>>()
-    private var definitions: Sequence<KotlinScriptDefinition>? = null
+    private var definitions: List<KotlinScriptDefinition>? = null
 
     fun reloadDefinitionsBy(contributor: ScriptDefinitionContributor) = lock.write {
         if (definitions == null) return // not loaded yet
@@ -86,10 +86,10 @@ class ScriptDefinitionsManager(private val project: Project) : LazyScriptDefinit
 
     override val currentDefinitions: Sequence<KotlinScriptDefinition>
         get() =
-            definitions ?: kotlin.run {
+            (definitions ?: kotlin.run {
                 reloadScriptDefinitions()
                 definitions!!
-            }
+            }).asSequence()
 
     private fun getContributors(): List<ScriptDefinitionContributor> {
         @Suppress("DEPRECATION")
@@ -106,6 +106,14 @@ class ScriptDefinitionsManager(private val project: Project) : LazyScriptDefinit
         }
 
         updateDefinitions()
+    }
+
+    fun saveNewDefinitions(newDefinitions: List<KotlinScriptDefinition>) = lock.write {
+        definitions = newDefinitions
+
+        clearCache()
+        ServiceManager.getService(project, ScriptDependenciesCache::class.java).clear()
+        EditorNotifications.getInstance(project).updateAllNotifications()
     }
 
     fun getAllDefinitions() = currentDefinitions.toList()
@@ -136,7 +144,10 @@ class ScriptDefinitionsManager(private val project: Project) : LazyScriptDefinit
 
     private fun updateDefinitions() {
         assert(lock.isWriteLocked) { "updateDefinitions should only be called under the write lock" }
-        definitions = definitionsByContributor.values.flattenTo(mutableListOf()).asSequence()
+
+        definitions = definitionsByContributor.values.flattenTo(mutableListOf()).sortedBy {
+            definitions?.indexOf(it) ?: 1000
+        }
 
         val fileTypeManager = FileTypeManager.getInstance()
 
