@@ -1,8 +1,9 @@
 // !LANGUAGE: +AllowContractsForCustomFunctions +UseReturnsEffect
+// !USE_EXPERIMENTAL: kotlin.internal.ContractsDsl
 // !DIAGNOSTICS: -INVISIBLE_REFERENCE -INVISIBLE_MEMBER
 // !WITH_NEW_INFERENCE
 
-import kotlin.internal.contracts.*
+import kotlin.contracts.*
 
 fun notIsString(x: Any?): Boolean {
     contract {

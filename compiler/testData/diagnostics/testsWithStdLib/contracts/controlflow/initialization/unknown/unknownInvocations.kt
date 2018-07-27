@@ -1,7 +1,8 @@
 // !LANGUAGE: +AllowContractsForCustomFunctions +UseCallsInPlaceEffect
+// !USE_EXPERIMENTAL: kotlin.internal.ContractsDsl
 // !DIAGNOSTICS: -INVISIBLE_REFERENCE -INVISIBLE_MEMBER
 
-import kotlin.internal.contracts.*
+import kotlin.contracts.*
 
 fun <T> inPlace(block: () -> T): T {
     contract {
