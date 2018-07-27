@@ -1,7 +1,8 @@
 // !DIAGNOSTICS: -UNUSED_PARAMETER -INVISIBLE_MEMBER -INVISIBLE_REFERENCE
+// !USE_EXPERIMENTAL: kotlin.internal.ContractsDsl
 // !LANGUAGE: +AllowContractsForCustomFunctions +UseCallsInPlaceEffect
 
-import kotlin.internal.contracts.*
+import kotlin.contracts.*
 
 inline fun <T> myRun(block: () -> T): T {
     contract {
