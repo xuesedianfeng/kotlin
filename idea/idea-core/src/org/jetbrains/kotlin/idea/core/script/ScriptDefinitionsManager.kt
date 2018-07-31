@@ -33,6 +33,7 @@ import com.intellij.openapi.projectRoots.ex.PathUtilEx
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.ui.EditorNotifications
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.idea.caches.project.SdkInfo
 import org.jetbrains.kotlin.idea.caches.project.getScriptRelatedModuleInfo
@@ -107,6 +108,8 @@ class ScriptDefinitionsManager(private val project: Project) : LazyScriptDefinit
         updateDefinitions()
     }
 
+    fun getAllDefinitions() = currentDefinitions
+
     override fun getDefaultScriptDefinition(): KotlinScriptDefinition {
         return StandardIdeScriptDefinition(project)
     }
@@ -155,6 +158,12 @@ class ScriptDefinitionsManager(private val project: Project) : LazyScriptDefinit
         clearCache()
         // TODO: clear by script type/definition
         ServiceManager.getService(project, ScriptDependenciesCache::class.java).clear()
+
+        ApplicationManager.getApplication().invokeLater {
+            if (!project.isDisposed) {
+                EditorNotifications.getInstance(project).updateAllNotifications()
+            }
+        }
     }
 
     private fun ScriptDefinitionContributor.safeGetDefinitions(): List<KotlinScriptDefinition> {
