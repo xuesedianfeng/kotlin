@@ -24,7 +24,7 @@ dependencies {
     compileOnly(project(":idea:idea-maven"))
 
     runtime(projectRuntimeJar(":kotlin-compiler"))
-    runtime(projectDist(":kotlin-stdlib"))
+    runtime(project(":kotlin-stdlib"))
 }
 
 sourceSets {
