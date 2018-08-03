@@ -49,7 +49,9 @@ class CoroutineTransformerMethodVisitor(
     // It's only matters for named functions, may differ from '!isStatic(access)' in case of DefaultImpls
     private val needDispatchReceiver: Boolean = false,
     // May differ from containingClassInternalName in case of DefaultImpls
-    private val internalNameForDispatchReceiver: String? = null
+    private val internalNameForDispatchReceiver: String? = null,
+    // For crossinline lambdas we do not generate DebugMetadata annotation, otherwise it will be generated twice
+    private val isCrossinlineLambda: Boolean = false
 ) : TransformationMethodVisitor(delegate, access, name, desc, signature, exceptions) {
 
     private val classBuilderForCoroutineState: ClassBuilder by lazy(obtainClassBuilderForCoroutineState)
@@ -164,7 +166,7 @@ class CoroutineTransformerMethodVisitor(
             )
         }
 
-        if (languageVersionSettings.isReleaseCoroutines()) {
+        if (languageVersionSettings.isReleaseCoroutines() && !isCrossinlineLambda) {
             writeDebugMetadata(listOf(tableSwitchLabel) + suspensionPointLabels.map {
                 it.label.info.safeAs<LabelNode>().sure { "suspensionPointLabel shall have valid info. Check state-machine generation." }
             }, variableToSpilledMapping)
@@ -178,10 +180,6 @@ class CoroutineTransformerMethodVisitor(
         val lines = suspensionPointLabels.map { label ->
             label.safeAs<AbstractInsnNode>()?.findNextOrNull { it is LineNumberNode }.safeAs<LineNumberNode>()
                 .sure { "lineNumber of label $label is not found, check state machine generation" }.line
-        }
-        // TODO: HACK around crossinline suspend functions: otherwise DebugMetadata is duplicated
-        if (classBuilderForCoroutineState.thisName.contains("\$\$inlined\$")) {
-            return
         }
         val metadata = classBuilderForCoroutineState.newAnnotation(debugMetadataAnnotationAsmType.descriptor, true)
         // TODO: support inlined functions (similar to SMAP)

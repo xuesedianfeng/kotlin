@@ -449,7 +449,8 @@ class AnonymousObjectTransformer(
                 shouldPreserveClassInitialization = state.constructorCallNormalizationMode.shouldPreserveClassInitialization,
                 containingClassInternalName = builder.thisName,
                 isForNamedFunction = false,
-                sourceFile = sourceInfo ?: ""
+                sourceFile = sourceInfo ?: "",
+                isCrossinlineLambda = inliningContext.isContinuation
             )
         }
     }
