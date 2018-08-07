@@ -70,15 +70,14 @@ class RedundantLocalsEliminationMethodTransformer(private val languageVersionSet
         val insns = findSafeAstorePredecessors(methodNode, ignoreLocalVariableTable = false) {
             it.isUnitInstance() || it.opcode == Opcodes.ACONST_NULL || it.opcode == Opcodes.ALOAD
         }
-        insns.asIterable().firstOrNull { (pred, astore) ->
+        for ((pred, astore) in insns) {
             val index = astore.localIndex()
 
-            methodNode.instructions.removeAll(listOf(pred, astore))
+            val aload = methodNode.instructions.asSequence()
+                .singleOrNull { it.opcode == Opcodes.ALOAD && it.localIndex() == index } ?: continue
 
-            methodNode.instructions.asSequence()
-                .filter { it.opcode == Opcodes.ALOAD && it.localIndex() == index }
-                .toList()
-                .forEach { methodNode.instructions.set(it, pred.clone()) }
+            methodNode.instructions.removeAll(listOf(pred, astore))
+            methodNode.instructions.set(aload, pred.clone())
             return true
         }
         return false
@@ -149,21 +148,21 @@ class RedundantLocalsEliminationMethodTransformer(private val languageVersionSet
                     it.previous?.opcode == Opcodes.ALOAD
         }
 
+        var changed = false
+
         for ((checkcast, astore) in insns) {
-            val aload = checkcast.previous
+            val aloadk = checkcast.previous
             val index = astore.localIndex()
 
-            methodNode.instructions.removeAll(listOf(aload, checkcast, astore))
+            val aloadn = methodNode.instructions.asSequence()
+                .singleOrNull { it.opcode == Opcodes.ALOAD && it.localIndex() == index } ?: continue
 
-            methodNode.instructions.asSequence()
-                .filter { it.opcode == Opcodes.ALOAD && it.localIndex() == index }
-                .toList()
-                .forEach {
-                    methodNode.instructions.insertBefore(it, aload.clone())
-                    methodNode.instructions.set(it, checkcast.clone())
-                }
+            methodNode.instructions.removeAll(listOf(aloadk, checkcast, astore))
+            methodNode.instructions.insertBefore(aloadn, aloadk.clone())
+            methodNode.instructions.set(aloadn, checkcast.clone())
+            changed = true
         }
-        return insns.isNotEmpty()
+        return changed
     }
 
     private fun findSafeAstorePredecessors(
