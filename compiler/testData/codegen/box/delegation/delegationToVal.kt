@@ -1,6 +1,4 @@
-// IGNORE_BACKEND: JS_IR
-// TODO: muted automatically, investigate should it be ran for JS or not
-// IGNORE_BACKEND: JS, NATIVE
+// TARGET_BACKEND: JVM
 
 // WITH_RUNTIME
 // FULL_JDK
@@ -17,7 +15,7 @@ class CActing(val value: String = "OK") : IActing {
 class Test(val acting: CActing = CActing()) : IActing by acting {
 }
 
-// even if open so we don't need delegate field
+// even if open so we don't needgit delegate field
 open class Test2(open val acting: CActing = CActing()) : IActing by acting {
 }
 
