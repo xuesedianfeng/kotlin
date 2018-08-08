@@ -25,7 +25,9 @@ class JvmSamConversionTransformer(
         SingleAbstractMethodUtils.getFunctionTypeForSamType(possibleSamType, samResolver)?.unwrap()
 
     override fun shouldRunSamConversionForFunction(candidate: CallableDescriptor): Boolean {
-        if (languageVersionSettings.supportsFeature(LanguageFeature.SamConversionForKotlinFunctions)) return true
+        if (languageVersionSettings.supportsFeature(LanguageFeature.NewInference) &&
+            languageVersionSettings.supportsFeature(LanguageFeature.SamConversionForKotlinFunctions)
+        ) return true
 
         val functionDescriptor = candidate.original as? FunctionDescriptor ?: return false
         if (functionDescriptor is TypeAliasConstructorDescriptor &&

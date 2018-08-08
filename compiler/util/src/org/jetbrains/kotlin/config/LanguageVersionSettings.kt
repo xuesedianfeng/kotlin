@@ -103,7 +103,7 @@ enum class LanguageFeature(
 
     NewInference(sinceVersion = KOTLIN_1_3, defaultState = State.DISABLED),
 
-    SamConversionForKotlinFunctions(sinceVersion = KOTLIN_1_3, defaultState = State.DISABLED),
+    SamConversionForKotlinFunctions(sinceVersion = KOTLIN_1_3, defaultState = State.ENABLED),
 
     InlineClasses(sinceVersion = KOTLIN_1_3, defaultState = State.ENABLED_WITH_WARNING, kind = UNSTABLE_FEATURE),
 
