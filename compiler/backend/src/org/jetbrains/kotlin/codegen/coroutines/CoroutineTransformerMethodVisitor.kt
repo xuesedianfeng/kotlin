@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.codegen.StackValue
 import org.jetbrains.kotlin.codegen.TransformationMethodVisitor
 import org.jetbrains.kotlin.codegen.inline.*
 import org.jetbrains.kotlin.codegen.optimization.DeadCodeEliminationMethodTransformer
+import org.jetbrains.kotlin.codegen.optimization.boxing.isPrimitiveUnboxing
 import org.jetbrains.kotlin.codegen.optimization.common.*
 import org.jetbrains.kotlin.codegen.optimization.fixStack.FixStackMethodTransformer
 import org.jetbrains.kotlin.codegen.optimization.fixStack.top
@@ -20,6 +21,8 @@ import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.config.isReleaseCoroutines
 import org.jetbrains.kotlin.resolve.jvm.AsmTypes
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.JvmDeclarationOrigin
+import org.jetbrains.kotlin.utils.addToStdlib.cast
+import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import org.jetbrains.kotlin.utils.sure
 import org.jetbrains.org.objectweb.asm.Label
 import org.jetbrains.org.objectweb.asm.MethodVisitor
@@ -161,7 +164,6 @@ class CoroutineTransformerMethodVisitor(
                 defaultLabel
             )
         }
-        fixCoercedLocalVariablesStartLabel(methodNode)
     }
 
     private fun addContinuationToLvt(methodNode: MethodNode, startLabel: LabelNode, endLabel: LabelNode) {
@@ -175,46 +177,6 @@ class CoroutineTransformerMethodVisitor(
                 continuationIndex
             )
         )
-    }
-
-    // Fix startLabel for primitives.
-    // In like val a = suspendReturnsInt()
-    // `a` is coerced from Object to int, and coercion happens before scopeStart's mark:
-    //  LL
-    //   LINENUMBER ...
-    //   ...
-    //   ISTORE N
-    //  LM
-    //   /* no lineNumber here */
-    //   ...
-    //  LOCALVARIABLE name LM LK N
-    // Thus, move linenumber to correct label
-    private fun fixCoercedLocalVariablesStartLabel(methodNode: MethodNode) {
-        val primitives = methodNode.localVariables.filter { AsmUtil.isPrimitive(Type.getType(it.desc)) }.toMutableSet()
-        if (primitives.isEmpty()) return
-        for (primitive in primitives) {
-            val store = primitive.start.previous
-            if (store is VarInsnNode && store.`var` == primitive.index) {
-                val checkcast = store.previous ?: continue
-                val label = findLabelOfInsn(checkcast) ?: continue
-                val lineNumber = label.next as? LineNumberNode ?: continue
-                var tmp: AbstractInsnNode? = primitive.start
-                while (tmp != null && (tmp.next is LabelNode || tmp.next.opcode == Opcodes.NOP)) {
-                    tmp = tmp.next
-                }
-                val finalLabel = findLabelOfInsn(tmp)
-                methodNode.instructions.remove(lineNumber)
-                methodNode.instructions.insert(finalLabel, LineNumberNode(lineNumber.line, finalLabel))
-            }
-        }
-    }
-
-    private fun findLabelOfInsn(insn: AbstractInsnNode?): LabelNode? {
-        var current = insn
-        while (current != null && current !is LabelNode) {
-            current = current.previous
-        }
-        return current as LabelNode?
     }
 
     private fun removeFakeContinuationConstructorCall(methodNode: MethodNode) {
@@ -573,6 +535,7 @@ class CoroutineTransformerMethodVisitor(
             }
             remove(possibleTryCatchBlockStart.previous)
 
+            val afterSuspensionPointLineNumber = nextLineNumberNode?.line ?: suspendElementLineNumber
             insert(possibleTryCatchBlockStart, withInstructionAdapter {
                 generateResumeWithExceptionCheck(languageVersionSettings.isReleaseCoroutines(), dataIndex, exceptionIndex)
 
@@ -583,9 +546,33 @@ class CoroutineTransformerMethodVisitor(
 
                 // Extend next instruction linenumber. Can't use line number of suspension point here because both non-suspended execution
                 // and re-entering after suspension passes this label.
-                val afterSuspensionPointLineNumber = nextLineNumberNode?.line ?: suspendElementLineNumber
-                visitLineNumber(afterSuspensionPointLineNumber, continuationLabelAfterLoadedResult.label)
+
+                // However, for primitives we generate it separately
+                if (possibleTryCatchBlockStart.next?.isUnboxingSequence() != true) {
+                    visitLineNumber(afterSuspensionPointLineNumber, continuationLabelAfterLoadedResult.label)
+                }
             })
+
+            // In code like val a = suspendReturnsInt()
+            // `a` is coerced from Object to int, and coercion happens before scopeStart's mark:
+            //  LL
+            //   CHECKCAST java/lang/Number
+            //   INVOKEVIRTUAL java/lang/Number.intValue ()I
+            //   ISTORE N
+            //  LM
+            //   /* put lineNumber here */
+            //   ...
+            //  LOCALVARIABLE name LM LK N
+            if (continuationLabelAfterLoadedResult.label.info.safeAs<AbstractInsnNode>()?.next?.isUnboxingSequence() == true) {
+                // Find next label after unboxing and put linenumber there
+                var current = (continuationLabelAfterLoadedResult.label.info as AbstractInsnNode).next
+                while (current != null && current !is LabelNode) {
+                    current = current.next
+                }
+                if (current != null) {
+                    insert(current, LineNumberNode(afterSuspensionPointLineNumber, current.cast()))
+                }
+            }
 
             if (nextLineNumberNode != null) {
                 // Remove the line number instruction as it now covered with line number on continuation label.
@@ -595,6 +582,10 @@ class CoroutineTransformerMethodVisitor(
         }
 
         return continuationLabel
+    }
+
+    private fun AbstractInsnNode.isUnboxingSequence(): Boolean {
+        return opcode == Opcodes.CHECKCAST && next?.isPrimitiveUnboxing() == true
     }
 
     // It's necessary to preserve some sensible invariants like there should be no jump in the middle of try-catch-block
