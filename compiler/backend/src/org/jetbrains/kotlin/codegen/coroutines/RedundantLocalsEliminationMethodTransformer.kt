@@ -67,20 +67,29 @@ class RedundantLocalsEliminationMethodTransformer(private val languageVersionSet
     private fun removeWithReplacement(
         methodNode: MethodNode
     ): Boolean {
-        val insns = findSafeAstorePredecessors(methodNode, ignoreLocalVariableTable = false) {
+        val cfg = ControlFlowGraph.build(methodNode)
+        val insns = findSafeAstorePredecessors(methodNode, cfg, ignoreLocalVariableTable = false) {
             it.isUnitInstance() || it.opcode == Opcodes.ACONST_NULL || it.opcode == Opcodes.ALOAD
         }
         for ((pred, astore) in insns) {
-            val index = astore.localIndex()
-
-            val aload = methodNode.instructions.asSequence()
-                .singleOrNull { it.opcode == Opcodes.ALOAD && it.localIndex() == index } ?: continue
+            val aload = findSingleLoadFromAstore(astore, cfg, methodNode) ?: continue
 
             methodNode.instructions.removeAll(listOf(pred, astore))
             methodNode.instructions.set(aload, pred.clone())
             return true
         }
         return false
+    }
+
+    private fun findSingleLoadFromAstore(
+        astore: AbstractInsnNode,
+        cfg: ControlFlowGraph,
+        methodNode: MethodNode
+    ): AbstractInsnNode? {
+        val aload = methodNode.instructions.asSequence()
+            .singleOrNull { it.opcode == Opcodes.ALOAD && it.localIndex() == astore.localIndex() } ?: return null
+        val succ = findImmediateSuccessors(astore, cfg, methodNode).singleOrNull() ?: return null
+        return if (aload == succ) aload else null
     }
 
     private fun AbstractInsnNode.clone() = when (this) {
@@ -142,7 +151,8 @@ class RedundantLocalsEliminationMethodTransformer(private val languageVersionSet
     private fun removeAloadCheckcastContinuationAstore(methodNode: MethodNode, languageVersionSettings: LanguageVersionSettings): Boolean {
         // Here we ignore the duplicates of continuation in local variable table,
         // Since it increases performance greatly.
-        val insns = findSafeAstorePredecessors(methodNode, ignoreLocalVariableTable = true) {
+        val cfg = ControlFlowGraph.build(methodNode)
+        val insns = findSafeAstorePredecessors(methodNode, cfg, ignoreLocalVariableTable = true) {
             it.opcode == Opcodes.CHECKCAST &&
                     (it as TypeInsnNode).desc == languageVersionSettings.continuationAsmType().internalName &&
                     it.previous?.opcode == Opcodes.ALOAD
@@ -152,10 +162,7 @@ class RedundantLocalsEliminationMethodTransformer(private val languageVersionSet
 
         for ((checkcast, astore) in insns) {
             val aloadk = checkcast.previous
-            val index = astore.localIndex()
-
-            val aloadn = methodNode.instructions.asSequence()
-                .singleOrNull { it.opcode == Opcodes.ALOAD && it.localIndex() == index } ?: continue
+            val aloadn = findSingleLoadFromAstore(astore, cfg, methodNode) ?: continue
 
             methodNode.instructions.removeAll(listOf(aloadk, checkcast, astore))
             methodNode.instructions.insertBefore(aloadn, aloadk.clone())
@@ -167,12 +174,11 @@ class RedundantLocalsEliminationMethodTransformer(private val languageVersionSet
 
     private fun findSafeAstorePredecessors(
         methodNode: MethodNode,
+        cfg: ControlFlowGraph,
         ignoreLocalVariableTable: Boolean,
         predicate: (AbstractInsnNode) -> Boolean
     ): Map<AbstractInsnNode, AbstractInsnNode> {
         val insns = methodNode.instructions.asSequence().filter { predicate(it) }.toList()
-
-        val cfg = ControlFlowGraph.build(methodNode)
         val res = hashMapOf<AbstractInsnNode, AbstractInsnNode>()
 
         for (insn in insns) {
