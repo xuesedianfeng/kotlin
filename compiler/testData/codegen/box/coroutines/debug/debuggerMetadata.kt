@@ -10,14 +10,16 @@ import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 import kotlin.coroutines.jvm.internal.*
 
-fun getLabelValue(c: Continuation<*>): Int {
-    val field = c.javaClass.getDeclaredField("label")
-    field.setAccessible(true)
-    return field.get(c) as Int - 1
+suspend fun getVariableToSpilled() = suspendCoroutineUninterceptedOrReturn<Array<String>> {
+    getVariableToSpilledMapping(it)
 }
 
-suspend fun getVariableToSpilled() = suspendCoroutineUninterceptedOrReturn<Map<Int, String>> {
-    getVariableToSpilledMapping(it, getLabelValue(it))
+fun Array<String>.toMap(): Map<String, String> {
+    val res = hashMapOf<String, String>()
+    for (i in 0..(size - 1) step 2) {
+        res[get(i)] = get(i + 1)
+    }
+    return res
 }
 
 var continuation: Continuation<*>? = null
@@ -32,12 +34,12 @@ suspend fun dummy() {}
 suspend fun named(): String {
     dummy()
     val s = ""
-    return getVariableToSpilled()[1] ?: "named fail"
+    return getVariableToSpilled().toMap()["L$0"] ?: "named fail"
 }
 
 suspend fun suspended() {
     dummy()
-    val s = ""
+    val ss = ""
     suspendHere()
 }
 
@@ -50,23 +52,23 @@ fun box(): String {
     builder {
         res = named()
     }
-    if (res != "L$0") {
+    if (res != "s") {
         return "" + res
     }
     builder {
         dummy()
         val a = ""
-        res = getVariableToSpilled()[2] ?: "lambda fail"
+        res = getVariableToSpilled().toMap()["L$0"] ?: "lambda fail"
     }
-    if (res != "L$0") {
+    if (res != "a") {
         return "" + res
     }
 
     builder {
         suspended()
     }
-    res = getVariableToSpilledMapping(continuation!!, getLabelValue(continuation!!))[1] ?: "suspended fail"
-    if (res != "L$0") {
+    res = getVariableToSpilledMapping(continuation!!).toMap()["L$0"] ?: "suspended fail"
+    if (res != "ss") {
         return "" + res
     }
     return "OK"

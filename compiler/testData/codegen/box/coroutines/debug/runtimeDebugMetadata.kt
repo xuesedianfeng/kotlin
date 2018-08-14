@@ -10,14 +10,8 @@ import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 import kotlin.coroutines.jvm.internal.*
 
-fun getLabelValue(c: Continuation<*>): Int {
-    val field = c.javaClass.getDeclaredField("label")
-    field.setAccessible(true)
-    return field.get(c) as Int - 1
-}
-
 suspend fun getSourceFileAndLineNumberFromContinuation() = suspendCoroutineUninterceptedOrReturn<Pair<String, Int>> {
-    getSourceFileAndLineNumber(it, getLabelValue(it))
+    getSourceFileAndLineNumber(it)
 }
 
 var continuation: Continuation<*>? = null
@@ -48,22 +42,22 @@ fun box(): String {
     builder {
         res = named()
     }
-    if (res != Pair("runtimeDebugMetadata.kt", 34)) {
+    if (res != Pair("runtimeDebugMetadata.kt", 28)) {
         return "" + res
     }
     builder {
         dummy()
         res = getSourceFileAndLineNumberFromContinuation()
     }
-    if (res != Pair("runtimeDebugMetadata.kt", 56)) {
+    if (res != Pair("runtimeDebugMetadata.kt", 50)) {
         return "" + res
     }
 
     builder {
         suspended()
     }
-    res = getSourceFileAndLineNumber(continuation!!, getLabelValue(continuation!!))
-    if (res != Pair("runtimeDebugMetadata.kt", 39)) {
+    res = getSourceFileAndLineNumber(continuation!!)
+    if (res != Pair("runtimeDebugMetadata.kt", 33)) {
         return "" + res
     }
     return "OK"

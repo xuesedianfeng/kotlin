@@ -110,7 +110,7 @@ class CoroutineTransformerMethodVisitor(
 
         UninitializedStoresProcessor(methodNode, shouldPreserveClassInitialization).run()
 
-        val variableToSpilledMapping = spillVariables(suspensionPoints, methodNode)
+        val spilledToVariableMapping = spillVariables(suspensionPoints, methodNode)
 
         val suspendMarkerVarIndex = methodNode.maxLocals++
 
@@ -169,13 +169,13 @@ class CoroutineTransformerMethodVisitor(
         if (languageVersionSettings.isReleaseCoroutines() && !isCrossinlineLambda) {
             writeDebugMetadata(listOf(tableSwitchLabel) + suspensionPointLabels.map {
                 it.label.info.safeAs<LabelNode>().sure { "suspensionPointLabel shall have valid info. Check state-machine generation." }
-            }, variableToSpilledMapping)
+            }, spilledToVariableMapping)
         }
     }
 
     private fun writeDebugMetadata(
         suspensionPointLabels: List<LabelNode>,
-        variableToSpilledMapping: List<List<Pair<Int, String>>>
+        spilledToVariableMapping: List<List<Pair<String, String>>>
     ) {
         val lines = suspensionPointLabels.map { label ->
             label.safeAs<AbstractInsnNode>()?.findNextOrNull { it is LineNumberNode }.safeAs<LineNumberNode>()
@@ -188,14 +188,16 @@ class CoroutineTransformerMethodVisitor(
         }.visitEnd()
         metadata.visit("runtimeLineNumbers", lines.toTypedArray().toIntArray())
 
-        val debugIndexToLabel = variableToSpilledMapping.withIndex().flatMap { (labelIndex, list) ->
+        val debugIndexToLabel = spilledToVariableMapping.withIndex().flatMap { (labelIndex, list) ->
             list.map { labelIndex }
         }
-        val (debugLocalIndexes, debugSpilled) = variableToSpilledMapping.flatten().unzip()
+        val (debugSpilled, debugLocalNames) = spilledToVariableMapping.flatten().unzip()
         metadata.visit("debugIndexToLabel", debugIndexToLabel.toTypedArray().toIntArray())
-        metadata.visit("debugLocalIndexes", debugLocalIndexes.toTypedArray().toIntArray())
         metadata.visitArray("debugSpilled").also { v ->
             debugSpilled.forEach { v.visit(null, it) }
+        }.visitEnd()
+        metadata.visitArray("debugLocalNames").also { v ->
+            debugLocalNames.forEach { v.visit(null, it) }
         }.visitEnd()
         metadata.visitEnd()
     }
@@ -398,7 +400,7 @@ class CoroutineTransformerMethodVisitor(
         }
     }
 
-    private fun spillVariables(suspensionPoints: List<SuspensionPoint>, methodNode: MethodNode): List<List<Pair<Int, String>>> {
+    private fun spillVariables(suspensionPoints: List<SuspensionPoint>, methodNode: MethodNode): List<List<Pair<String, String>>> {
         val instructions = methodNode.instructions
         val frames = performRefinedTypeAnalysis(methodNode, containingClassInternalName)
         fun AbstractInsnNode.index() = instructions.indexOf(this)
@@ -407,7 +409,7 @@ class CoroutineTransformerMethodVisitor(
         val postponedActions = mutableListOf<() -> Unit>()
         val maxVarsCountByType = mutableMapOf<Type, Int>()
         val livenessFrames = analyzeLiveness(methodNode)
-        val variableToSpilledMapping = arrayListOf<List<Pair<Int, String>>>()
+        val spilledToVariableMapping = arrayListOf<List<Pair<String, String>>>()
 
         for (suspension in suspensionPoints) {
             val suspensionCallBegin = suspension.suspensionCallBegin
@@ -434,7 +436,7 @@ class CoroutineTransformerMethodVisitor(
             // NB: it's also rather useful for sake of optimization
             val livenessFrame = livenessFrames[suspensionCallBegin.index()]
 
-            val variableToSpilled = arrayListOf<Pair<Int, String>>()
+            val spilledToVariable = arrayListOf<Pair<String, String>>()
 
             // 0 - this
             // 1 - parameter
@@ -471,7 +473,7 @@ class CoroutineTransformerMethodVisitor(
                 varsCountByType[normalizedType] = indexBySort
 
                 val fieldName = normalizedType.fieldNameForVar(indexBySort)
-                variableToSpilled.add(index to fieldName)
+                localVariableName(methodNode, index, livenessFrames)?.also { spilledToVariable.add(fieldName to it) }
 
                 postponedActions.add {
                     with(instructions) {
@@ -494,7 +496,7 @@ class CoroutineTransformerMethodVisitor(
                 }
             }
 
-            variableToSpilledMapping.add(variableToSpilled)
+            spilledToVariableMapping.add(spilledToVariable)
 
             varsCountByType.forEach {
                 maxVarsCountByType[it.key] = Math.max(maxVarsCountByType[it.key] ?: 0, it.value)
@@ -512,8 +514,13 @@ class CoroutineTransformerMethodVisitor(
                 )
             }
         }
-        return variableToSpilledMapping
+        return spilledToVariableMapping
     }
+
+    private fun localVariableName(methodNode: MethodNode, index: Int, livenessFrames: List<VariableLivenessFrame>): String? =
+        methodNode.localVariables.find {
+            index == it.index && livenessFrames[methodNode.instructions.indexOf(it.start)].isAlive(index)
+        }?.name
 
     /**
      * See 'splitTryCatchBlocksContainingSuspensionPoint'
