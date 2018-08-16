@@ -443,13 +443,13 @@ class CodeInliner<TCallElement : KtElement>(
             }
         }
 
-        val newElements = elements.map {
-            ShortenReferences { ShortenReferences.Options(removeThis = true) }.process(it, shortenFilter)
+        val newElements = elements.map { element ->
+            ShortenReferences { ShortenReferences.Options(removeThis = true) }.process(element, shortenFilter)
         }
 
-        newElements.forEach {
+        newElements.forEach { newElement ->
             // clean up user data
-            it.forEachDescendantOfType<KtExpression> {
+            newElement.forEachDescendantOfType<KtExpression> {
                 it.clear(USER_CODE_KEY)
                 it.clear(CodeToInline.PARAMETER_USAGE_KEY)
                 it.clear(CodeToInline.TYPE_PARAMETER_USAGE_KEY)
@@ -457,7 +457,7 @@ class CodeInliner<TCallElement : KtElement>(
                 it.clear(RECEIVER_VALUE_KEY)
                 it.clear(WAS_FUNCTION_LITERAL_ARGUMENT_KEY)
             }
-            it.forEachDescendantOfType<KtValueArgument> {
+            newElement.forEachDescendantOfType<KtValueArgument> {
                 it.clear(MAKE_ARGUMENT_NAMED_KEY)
                 it.clear(DEFAULT_PARAMETER_VALUE_KEY)
             }
