@@ -168,7 +168,8 @@ class CodeInliner<TCallElement : KtElement>(
             if (oldName != null && oldName.nameHasConflictsInScope(lexicalScope)) {
                 val newName = KotlinNameSuggester.suggestNameByName(oldName, validator)
                 val renameProcessor = RenameProcessor(project, declaration, newName, false, false)
-                renameProcessor.run()
+                // NB: rename must not include progress inside! See KT-17252
+                renameProcessor.doRun()
             }
         }
     }
