@@ -379,6 +379,11 @@ public class InlineTestGenerated extends AbstractInlineTest {
                 runTest("idea/testData/refactoring/inline/function/returnAtEnd/MultipleStatements.kt");
             }
 
+            @TestMetadata("NameDuplicates.kt")
+            public void testNameDuplicates() throws Exception {
+                runTest("idea/testData/refactoring/inline/function/returnAtEnd/NameDuplicates.kt");
+            }
+
             @TestMetadata("OnLocalMemberLevel.kt")
             public void testOnLocalMemberLevel() throws Exception {
                 runTest("idea/testData/refactoring/inline/function/returnAtEnd/OnLocalMemberLevel.kt");
