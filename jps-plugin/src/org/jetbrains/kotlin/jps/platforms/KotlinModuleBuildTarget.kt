@@ -10,7 +10,6 @@ import org.jetbrains.jps.builders.storage.BuildDataPaths
 import org.jetbrains.jps.incremental.CompileContext
 import org.jetbrains.jps.incremental.ModuleBuildTarget
 import org.jetbrains.jps.incremental.ProjectBuildException
-import org.jetbrains.jps.incremental.storage.BuildDataManager
 import org.jetbrains.jps.model.java.JpsJavaClasspathKind
 import org.jetbrains.jps.model.java.JpsJavaExtensionService
 import org.jetbrains.jps.model.module.JpsModule
@@ -22,22 +21,17 @@ import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.compilerRunner.JpsCompilerEnvironment
 import org.jetbrains.kotlin.config.ApiVersion
-import org.jetbrains.kotlin.config.IncrementalCompilation
 import org.jetbrains.kotlin.config.LanguageVersion
 import org.jetbrains.kotlin.config.Services
-import org.jetbrains.kotlin.incremental.CacheVersion
 import org.jetbrains.kotlin.incremental.ChangesCollector
 import org.jetbrains.kotlin.incremental.ExpectActualTrackerImpl
-import org.jetbrains.kotlin.incremental.LookupTrackerImpl
 import org.jetbrains.kotlin.incremental.components.ExpectActualTracker
 import org.jetbrains.kotlin.incremental.components.LookupTracker
-import org.jetbrains.kotlin.jps.build.KotlinBuilder
-import org.jetbrains.kotlin.jps.build.KotlinIncludedModuleSourceRoot
-import org.jetbrains.kotlin.jps.build.KotlinDirtySourceFilesHolder
-import org.jetbrains.kotlin.jps.build.isKotlinSourceFile
-import org.jetbrains.kotlin.jps.incremental.CacheVersionProvider
+import org.jetbrains.kotlin.incremental.storage.version.CacheAttributesDiff
+import org.jetbrains.kotlin.incremental.storage.version.loadDiff
+import org.jetbrains.kotlin.incremental.storage.version.localCacheVersionManager
+import org.jetbrains.kotlin.jps.build.*
 import org.jetbrains.kotlin.jps.incremental.JpsIncrementalCache
-import org.jetbrains.kotlin.jps.model.kotlinCompilerArguments
 import org.jetbrains.kotlin.jps.model.productionOutputFilePath
 import org.jetbrains.kotlin.jps.model.testOutputFilePath
 import org.jetbrains.kotlin.modules.TargetId
@@ -49,11 +43,28 @@ import java.io.File
 /**
  * Properties and actions for Kotlin test / production module build target.
  */
-abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo>(
-    val context: CompileContext,
+abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo> internal constructor(
+    val jpsContext: CompileContext,
     val jpsModuleBuildTarget: ModuleBuildTarget
 ) {
+    // TODO(1.2.80): got rid of jpsContext and replace it with kotlinContext
+    val kotlinContext: KotlinCompileContext
+        get() = jpsContext.kotlin
+
+    // Initialized in KotlinCompileContext.loadTargets
+    lateinit var chunk: KotlinChunk
+
+    abstract val globalLookupCacheId: String
+
     abstract val isIncrementalCompilationEnabled: Boolean
+
+    @Suppress("LeakingThis")
+    val localCacheVersionManager = localCacheVersionManager(
+        kotlinContext.dataPaths.getTargetDataRoot(jpsModuleBuildTarget),
+        isIncrementalCompilationEnabled
+    )
+
+    val initialLocalCacheAttributesDiff: CacheAttributesDiff<*> = localCacheVersionManager.loadDiff()
 
     val module: JpsModule
         get() = jpsModuleBuildTarget.module
@@ -79,8 +90,8 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo>(
         val explicitOutputPath = if (isTests) module.testOutputFilePath else module.productionOutputFilePath
         val explicitOutputDir = explicitOutputPath?.let { File(it).absoluteFile.parentFile }
         return@lazy explicitOutputDir
-                ?: jpsModuleBuildTarget.outputDir
-                ?: throw ProjectBuildException("No output directory found for " + this)
+            ?: jpsModuleBuildTarget.outputDir
+            ?: throw ProjectBuildException("No output directory found for " + this)
     }
 
     val friendBuildTargets: List<KotlinModuleBuildTarget<*>>
@@ -88,8 +99,8 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo>(
             val result = mutableListOf<KotlinModuleBuildTarget<*>>()
 
             if (isTests) {
-                result.addIfNotNull(context.kotlinBuildTargets[module.productionBuildTarget])
-                result.addIfNotNull(context.kotlinBuildTargets[relatedProductionModule?.productionBuildTarget])
+                result.addIfNotNull(jpsContext.kotlinBuildTargets[module.productionBuildTarget])
+                result.addIfNotNull(jpsContext.kotlinBuildTargets[relatedProductionModule?.productionBuildTarget])
             }
 
             return result.filter { it.sources.isNotEmpty() }
@@ -102,6 +113,56 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo>(
 
     private val relatedProductionModule: JpsModule?
         get() = JpsJavaExtensionService.getInstance().getTestModuleProperties(module)?.productionModule
+
+    data class Dependency(
+        val src: KotlinModuleBuildTarget<*>,
+        val target: KotlinModuleBuildTarget<*>,
+        val exported: Boolean
+    )
+
+    internal fun calculateDependencies(): List<Dependency> {
+        val dependencies = mutableListOf<Dependency>()
+        val classpathKind = JpsJavaClasspathKind.compile(isTests)
+
+        // TODO(1.2.80): Ask for JPS API
+        // Unfortunately JPS has not API for accessing "exported" flag while enumerating module dependencies,
+        // but has API for getting all and exported only dependent modules.
+        // So, lets first get set of all dependent targets, then remove exported only.
+        val dependentTargets = mutableSetOf<KotlinModuleBuildTarget<*>>()
+
+        JpsJavaExtensionService.dependencies(module)
+            .includedIn(classpathKind)
+            .processModules { module ->
+                val kotlinTarget = kotlinContext.targetsBinding[ModuleBuildTarget(module, isTests)]
+                if (kotlinTarget != null) {
+                    dependentTargets.add(kotlinTarget)
+                }
+            }
+
+        JpsJavaExtensionService.dependencies(module)
+            .includedIn(classpathKind)
+            .exportedOnly()
+            .processModules { module ->
+                val kotlinTarget = kotlinContext.targetsBinding[ModuleBuildTarget(module, isTests)]
+                if (kotlinTarget != null) {
+                    dependentTargets.remove(kotlinTarget)
+                    dependencies.add(Dependency(this, kotlinTarget, true))
+                }
+            }
+
+        dependentTargets.forEach { target ->
+            dependencies.add(Dependency(this, target, false))
+        }
+
+        if (isTests) {
+            val productionTarget = kotlinContext.targetsBinding[ModuleBuildTarget(module, false)]
+            if (productionTarget != null) {
+                dependencies.add(Dependency(this, productionTarget, true))
+            }
+        }
+
+        return dependencies
+    }
 
     val allDependencies by lazy {
         JpsJavaExtensionService.dependencies(module).recursively().exportedOnly()
@@ -121,8 +182,8 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo>(
             .getOrCreateCompilerConfiguration(module.project)
             .compilerExcludes
 
-        val buildRootIndex = context.projectDescriptor.buildRootIndex
-        val roots = buildRootIndex.getTargetRoots(jpsModuleBuildTarget, context)
+        val buildRootIndex = jpsContext.projectDescriptor.buildRootIndex
+        val roots = buildRootIndex.getTargetRoots(jpsModuleBuildTarget, jpsContext)
         roots.forEach { rootDescriptor ->
             val isIncludedSourceRoot = rootDescriptor is KotlinIncludedModuleSourceRoot
 
@@ -182,9 +243,6 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo>(
         return false
     }
 
-    fun compilerArgumentsForChunk(chunk: ModuleChunk): CommonCompilerArguments =
-        chunk.representativeTarget().module.kotlinCompilerArguments
-
     open fun doAfterBuild() {
     }
 
@@ -199,7 +257,7 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo>(
         chunk: ModuleChunk,
         dirtyFilesHolder: KotlinDirtySourceFilesHolder,
         outputItems: Map<ModuleBuildTarget, Iterable<GeneratedFile>>,
-        incrementalCaches: Map<ModuleBuildTarget, JpsIncrementalCache>
+        incrementalCaches: Map<KotlinModuleBuildTarget<*>, JpsIncrementalCache>
     ) {
         // by default do nothing
     }
@@ -216,7 +274,7 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo>(
 
     open fun makeServices(
         builder: Services.Builder,
-        incrementalCaches: Map<ModuleBuildTarget, JpsIncrementalCache>,
+        incrementalCaches: Map<KotlinModuleBuildTarget<*>, JpsIncrementalCache>,
         lookupTracker: LookupTracker,
         exceptActualTracer: ExpectActualTracker
     ) {
@@ -225,7 +283,7 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo>(
             register(ExpectActualTracker::class.java, exceptActualTracer)
             register(CompilationCanceledStatus::class.java, object : CompilationCanceledStatus {
                 override fun checkCanceled() {
-                    if (context.cancelStatus.isCanceled) throw CompilationCanceledException()
+                    if (jpsContext.cancelStatus.isCanceled) throw CompilationCanceledException()
                 }
             })
         }
@@ -264,7 +322,7 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo>(
         val hasRemovedSources = dirtyFilesHolder.getRemovedFiles(target.jpsModuleBuildTarget).isNotEmpty()
         val hasDirtyOrRemovedSources = moduleSources.isNotEmpty() || hasRemovedSources
         if (hasDirtyOrRemovedSources) {
-            val logger = context.loggingManager.projectBuilderLogger
+            val logger = jpsContext.loggingManager.projectBuilderLogger
             if (logger.isEnabled) {
                 logger.logCompiledFiles(moduleSources, KotlinBuilder.KOTLIN_BUILDER_NAME, "Compiling files:")
             }
@@ -277,66 +335,48 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo>(
 
     abstract val buildMetaInfoFileName: String
 
-    fun buildMetaInfoFile(target: ModuleBuildTarget, dataManager: BuildDataManager): File =
-        File(dataManager.dataPaths.getTargetDataRoot(target), buildMetaInfoFileName)
+    fun isVersionChanged(chunk: KotlinChunk, buildMetaInfo: BuildMetaInfo): Boolean {
+        val file = chunk.buildMetaInfoFile(jpsModuleBuildTarget)
+        if (!file.exists()) return false
 
-    fun saveVersions(context: CompileContext, chunk: ModuleChunk, commonArguments: CommonCompilerArguments) {
-        val dataManager = context.projectDescriptor.dataManager
-        val targets = chunk.targets
-        val cacheVersionsProvider = CacheVersionProvider(dataManager.dataPaths, isIncrementalCompilationEnabled)
-        cacheVersionsProvider.allVersions(targets).forEach { it.saveIfNeeded() }
+        val prevBuildMetaInfo =
+            try {
+                buildMetaInfoFactory.deserializeFromString(file.readText()) ?: return false
+            } catch (e: Exception) {
+                KotlinBuilder.LOG.error("Could not deserialize build meta info", e)
+                return false
+            }
 
-        val buildMetaInfo = buildMetaInfoFactory.create(commonArguments)
-        val serializedMetaInfo = buildMetaInfoFactory.serializeToString(buildMetaInfo)
+        val prevLangVersion = LanguageVersion.fromVersionString(prevBuildMetaInfo.languageVersionString)
+        val prevApiVersion = ApiVersion.parse(prevBuildMetaInfo.apiVersionString)
 
-        for (target in chunk.targets) {
-            buildMetaInfoFile(target, dataManager).writeText(serializedMetaInfo)
+        val reasonToRebuild = when {
+            chunk.langVersion != prevLangVersion -> "Language version was changed ($prevLangVersion -> ${chunk.langVersion})"
+            chunk.apiVersion != prevApiVersion -> "Api version was changed ($prevApiVersion -> ${chunk.apiVersion})"
+            prevLangVersion != LanguageVersion.KOTLIN_1_0 && prevBuildMetaInfo.isEAP && !buildMetaInfo.isEAP -> {
+                // If EAP->Non-EAP build with IC, then rebuild all kotlin
+                "Last build was compiled with EAP-plugin"
+            }
+            else -> null
         }
+
+        if (reasonToRebuild != null) {
+            KotlinBuilder.LOG.info("$reasonToRebuild. Performing non-incremental rebuild (kotlin only)")
+            return true
+        }
+
+        return false
     }
 
-    fun checkCachesVersions(chunk: ModuleChunk, dataManager: BuildDataManager, actions: MutableSet<CacheVersion.Action>) {
-        val args = compilerArgumentsForChunk(chunk)
-        val currentBuildMetaInfo = buildMetaInfoFactory.create(args)
+    private fun checkRepresentativeTarget(chunk: KotlinChunk) {
+        check(chunk.representativeTarget == this)
+    }
 
-        for (target in chunk.targets) {
-            val file = buildMetaInfoFile(target, dataManager)
-            if (!file.exists()) continue
+    private fun checkRepresentativeTarget(chunk: ModuleChunk) {
+        check(chunk.representativeTarget() == jpsModuleBuildTarget)
+    }
 
-            val lastBuildMetaInfo =
-                try {
-                    buildMetaInfoFactory.deserializeFromString(file.readText()) ?: continue
-                } catch (e: Exception) {
-                    KotlinBuilder.LOG.error("Could not deserialize build meta info", e)
-                    continue
-                }
-
-            val lastBuildLangVersion = LanguageVersion.fromVersionString(lastBuildMetaInfo.languageVersionString)
-            val lastBuildApiVersion = ApiVersion.parse(lastBuildMetaInfo.apiVersionString)
-            val currentLangVersion =
-                args.languageVersion?.let { LanguageVersion.fromVersionString(it) } ?: LanguageVersion.LATEST_STABLE
-            val currentApiVersion =
-                args.apiVersion?.let { ApiVersion.parse(it) } ?: ApiVersion.createByLanguageVersion(currentLangVersion)
-
-            val reasonToRebuild = when {
-                currentLangVersion != lastBuildLangVersion -> {
-                    "Language version was changed ($lastBuildLangVersion -> $currentLangVersion)"
-                }
-
-                currentApiVersion != lastBuildApiVersion -> {
-                    "Api version was changed ($lastBuildApiVersion -> $currentApiVersion)"
-                }
-
-                lastBuildLangVersion != LanguageVersion.KOTLIN_1_0 && lastBuildMetaInfo.isEAP && !currentBuildMetaInfo.isEAP -> {
-                    // If EAP->Non-EAP build with IC, then rebuild all kotlin
-                    "Last build was compiled with EAP-plugin"
-                }
-                else -> null
-            }
-
-            if (reasonToRebuild != null) {
-                KotlinBuilder.LOG.info("$reasonToRebuild. Performing non-incremental rebuild (kotlin only)")
-                actions.add(CacheVersion.Action.REBUILD_ALL_KOTLIN)
-            }
-        }
+    private fun checkRepresentativeTarget(chunk: List<KotlinModuleBuildTarget<*>>) {
+        check(chunk.first() == this)
     }
 }

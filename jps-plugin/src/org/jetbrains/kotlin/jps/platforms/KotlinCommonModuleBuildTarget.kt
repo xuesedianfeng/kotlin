@@ -17,8 +17,8 @@ import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.K2MetadataCompilerArguments
 import org.jetbrains.kotlin.compilerRunner.JpsCompilerEnvironment
 import org.jetbrains.kotlin.compilerRunner.JpsKotlinCompilerRunner
-import org.jetbrains.kotlin.config.IncrementalCompilation
 import org.jetbrains.kotlin.jps.build.KotlinDirtySourceFilesHolder
+import org.jetbrains.kotlin.jps.build.ModuleBuildTarget
 import org.jetbrains.kotlin.jps.model.k2MetadataCompilerArguments
 import org.jetbrains.kotlin.jps.model.kotlinCompilerSettings
 
@@ -35,6 +35,9 @@ class KotlinCommonModuleBuildTarget(context: CompileContext, jpsModuleBuildTarge
 
     override val buildMetaInfoFileName
         get() = COMMON_BUILD_META_INFO_FILE_NAME
+
+    override val globalLookupCacheId: String
+        get() = "metadata-compiler"
 
     override fun compileModuleChunk(
         chunk: ModuleChunk,
@@ -87,7 +90,7 @@ class KotlinCommonModuleBuildTarget(context: CompileContext, jpsModuleBuildTarge
         result: MutableList<String>,
         isTests: Boolean
     ) {
-        val dependencyBuildTarget = context.kotlinBuildTargets[ModuleBuildTarget(module, isTests)]
+        val dependencyBuildTarget = kotlinContext.targetsBinding[ModuleBuildTarget(module, isTests)]
 
         if (dependencyBuildTarget != this@KotlinCommonModuleBuildTarget &&
             dependencyBuildTarget is KotlinCommonModuleBuildTarget &&

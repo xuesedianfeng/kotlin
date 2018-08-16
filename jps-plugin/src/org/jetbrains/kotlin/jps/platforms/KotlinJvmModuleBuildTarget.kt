@@ -64,7 +64,7 @@ class KotlinJvmModuleBuildTarget(compileContext: CompileContext, jpsModuleBuildT
 
     override fun makeServices(
         builder: Services.Builder,
-        incrementalCaches: Map<ModuleBuildTarget, JpsIncrementalCache>,
+        incrementalCaches: Map<KotlinModuleBuildTarget<*>, JpsIncrementalCache>,
         lookupTracker: LookupTracker,
         exceptActualTracer: ExpectActualTracker
     ) {
@@ -74,7 +74,7 @@ class KotlinJvmModuleBuildTarget(compileContext: CompileContext, jpsModuleBuildT
             register(
                 IncrementalCompilationComponents::class.java,
                 IncrementalCompilationComponentsImpl(
-                    incrementalCaches.mapKeys { context.kotlinBuildTargets[it.key]!!.targetId } as Map<TargetId, IncrementalCache>
+                    incrementalCaches.mapKeys { it.key.targetId } as Map<TargetId, IncrementalCache>
                 )
             )
         }
@@ -141,7 +141,7 @@ class KotlinJvmModuleBuildTarget(compileContext: CompileContext, jpsModuleBuildT
 
         var hasDirtySources = false
 
-        val targets = chunk.targets.mapNotNull { this.context.kotlinBuildTargets[it] as? KotlinJvmModuleBuildTarget }
+        val targets = chunk.targets.mapNotNull { kotlinContext.targetsBinding[it] as? KotlinJvmModuleBuildTarget }
 
         val outputDirs = targets.map { it.outputDir }.toSet()
 
@@ -159,7 +159,7 @@ class KotlinJvmModuleBuildTarget(compileContext: CompileContext, jpsModuleBuildT
                 kotlinModuleId.name,
                 outputDir.absolutePath,
                 moduleSources,
-                target.findSourceRoots(context),
+                target.findSourceRoots(jpsContext),
                 target.findClassPathRoots(),
                 commonSources,
                 target.findModularJdkRoot(),
@@ -256,14 +256,17 @@ class KotlinJvmModuleBuildTarget(compileContext: CompileContext, jpsModuleBuildT
         updateIncrementalCache(files, jpsIncrementalCache as IncrementalJvmCache, changesCollector, null)
     }
 
+    override val globalLookupCacheId: String
+        get() = "jvm"
+
     override fun updateChunkMappings(
         chunk: ModuleChunk,
         dirtyFilesHolder: KotlinDirtySourceFilesHolder,
         outputItems: Map<ModuleBuildTarget, Iterable<GeneratedFile>>,
-        incrementalCaches: Map<ModuleBuildTarget, JpsIncrementalCache>
+        incrementalCaches: Map<KotlinModuleBuildTarget<*>, JpsIncrementalCache>
     ) {
-        val previousMappings = context.projectDescriptor.dataManager.mappings
-        val callback = JavaBuilderUtil.getDependenciesRegistrar(context)
+        val previousMappings = jpsContext.projectDescriptor.dataManager.mappings
+        val callback = JavaBuilderUtil.getDependenciesRegistrar(jpsContext)
 
         val targetDirtyFiles: Map<ModuleBuildTarget, Set<File>> = chunk.targets.keysToMap {
             val files = HashSet<File>()
@@ -273,7 +276,7 @@ class KotlinJvmModuleBuildTarget(compileContext: CompileContext, jpsModuleBuildT
         }
 
         fun getOldSourceFiles(target: ModuleBuildTarget, generatedClass: GeneratedJvmClass): Set<File> {
-            val cache = incrementalCaches[target] ?: return emptySet()
+            val cache = incrementalCaches[kotlinContext.targetsBinding[target]] ?: return emptySet()
             cache as JpsIncrementalJvmCache
 
             val className = generatedClass.outputClass.className
@@ -301,7 +304,7 @@ class KotlinJvmModuleBuildTarget(compileContext: CompileContext, jpsModuleBuildT
         }
 
         val allCompiled = dirtyFilesHolder.allDirtyFiles
-        JavaBuilderUtil.registerFilesToCompile(context, allCompiled)
-        JavaBuilderUtil.registerSuccessfullyCompiled(context, allCompiled)
+        JavaBuilderUtil.registerFilesToCompile(jpsContext, allCompiled)
+        JavaBuilderUtil.registerSuccessfullyCompiled(jpsContext, allCompiled)
     }
 }
