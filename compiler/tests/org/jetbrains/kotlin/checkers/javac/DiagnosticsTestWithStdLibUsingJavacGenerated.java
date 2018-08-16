@@ -1553,6 +1553,16 @@ public class DiagnosticsTestWithStdLibUsingJavacGenerated extends AbstractDiagno
             runTest("compiler/testData/diagnostics/testsWithStdLib/coroutines/suspendExternalFunctions.kt");
         }
 
+        @TestMetadata("suspendFunctionN.kt")
+        public void testSuspendFunctionN() throws Exception {
+            runTest("compiler/testData/diagnostics/testsWithStdLib/coroutines/suspendFunctionN.kt");
+        }
+
+        @TestMetadata("suspendFunctionN12.kt")
+        public void testSuspendFunctionN12() throws Exception {
+            runTest("compiler/testData/diagnostics/testsWithStdLib/coroutines/suspendFunctionN12.kt");
+        }
+
         @TestMetadata("suspendFunctions.kt")
         public void testSuspendFunctions_1_2() throws Exception {
             runTestWithPackageReplacement("compiler/testData/diagnostics/testsWithStdLib/coroutines/suspendFunctions.kt", "kotlin.coroutines.experimental");
