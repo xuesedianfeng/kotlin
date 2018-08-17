@@ -1,17 +1,6 @@
 /*
- * Copyright 2010-2015 JetBrains s.r.o.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright 2010-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
+ * that can be found in the license/LICENSE.txt file.
  */
 
 package kotlin.reflect.jvm.internal
@@ -111,7 +100,7 @@ internal abstract class KCallableImpl<out R> : KCallable<R> {
     }
 
     // See ArgumentGenerator#generate
-    private fun callDefaultMethod(args: Map<KParameter, Any?>): R {
+    internal fun callDefaultMethod(args: Map<KParameter, Any?>, additionalArguments: () -> List<Any?> = { emptyList() }): R {
         val parameters = parameters
         val arguments = ArrayList<Any?>(parameters.size)
         var mask = 0
@@ -143,6 +132,8 @@ internal abstract class KCallableImpl<out R> : KCallable<R> {
                 index++
             }
         }
+
+        arguments.addAll(additionalArguments())
 
         if (!anyOptional) {
             return call(*arguments.toTypedArray())
