@@ -9,7 +9,8 @@ import kotlin.coroutines.Continuation
 
 // TODO: Uncomment when KT-25372 is fixed
 @Target(AnnotationTarget.CLASS)
-annotation class DebugMetadata(
+@SinceKotlin("1.3")
+internal annotation class DebugMetadata(
     // @JvmName("a")
     val runtimeSourceFiles: Array<String>,
     // @JvmName("b")
@@ -22,12 +23,13 @@ annotation class DebugMetadata(
     val debugIndexToLabel: IntArray
 )
 
-// TODO: move to appropriate place
+@SinceKotlin("1.3")
 public fun getSourceFileAndLineNumber(c: Continuation<*>): Pair<String, Int> {
     val debugMetadata = c.getDebugMetadataAnnotation()
     return debugMetadata.runtimeSourceFiles.zip(debugMetadata.runtimeLineNumbers.asList())[c.getLabel() ?: return "" to -1]
 }
 
+@SinceKotlin("1.3")
 public fun getSourceFileAndLineNumberForDebugger(c: Continuation<*>): String {
     val pair = getSourceFileAndLineNumber(c)
     return if (pair.second < 0) "" else "${pair.first}:${pair.second}"
@@ -44,6 +46,7 @@ private fun Continuation<*>.getLabel(): Int? {
     return field.get(this) as Int - 1
 }
 
+@SinceKotlin("1.3")
 public fun getVariableToSpilledMapping(c: Continuation<*>): Array<String> {
     val debugMetadata = c.getDebugMetadataAnnotation()
     val res = arrayListOf<String>()

@@ -2753,14 +2753,6 @@ public final class kotlin/coroutines/intrinsics/IntrinsicsKt {
 	public static final fun intercepted (Lkotlin/coroutines/Continuation;)Lkotlin/coroutines/Continuation;
 }
 
-public abstract interface annotation class kotlin/coroutines/jvm/internal/DebugMetadata : java/lang/annotation/Annotation {
-	public abstract fun debugIndexToLabel ()[I
-	public abstract fun debugLocalNames ()[Ljava/lang/String;
-	public abstract fun debugSpilled ()[Ljava/lang/String;
-	public abstract fun runtimeLineNumbers ()[I
-	public abstract fun runtimeSourceFiles ()[Ljava/lang/String;
-}
-
 public final class kotlin/coroutines/jvm/internal/DebugMetadataKt {
 	public static final fun getSourceFileAndLineNumber (Lkotlin/coroutines/Continuation;)Lkotlin/Pair;
 	public static final fun getSourceFileAndLineNumberForDebugger (Lkotlin/coroutines/Continuation;)Ljava/lang/String;
