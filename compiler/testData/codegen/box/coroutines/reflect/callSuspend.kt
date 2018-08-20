@@ -4,6 +4,7 @@
 
 import helpers.*
 import kotlin.coroutines.*
+import kotlin.coroutines.intrinsics.*
 import kotlin.reflect.full.callSuspend
 
 fun builder(c: suspend () -> Unit) {
@@ -19,6 +20,23 @@ class A {
 suspend fun twoArgs(a: String, b: String) = "$a$b"
 
 fun ordinary() = "OK"
+
+var log = ""
+
+var proceed = {}
+
+suspend fun suspendHere() = suspendCoroutineUninterceptedOrReturn<Unit> { cont ->
+    proceed = {
+        cont.resumeWith(SuccessOrFailure.success(Unit))
+    }
+    COROUTINE_SUSPENDED
+}
+
+suspend fun suspending() {
+    log += "before;"
+    suspendHere()
+    log += "after;"
+}
 
 fun box(): String {
     var res: String? = ""
@@ -37,5 +55,11 @@ fun box(): String {
     builder {
         res = ::ordinary.callSuspend() as String?
     }
+    builder {
+        ::suspending.callSuspend()
+    }
+    log += "suspended;"
+    proceed()
+    if (log != "before;suspended;after;") return log
     return res ?: "FAIL 4"
 }

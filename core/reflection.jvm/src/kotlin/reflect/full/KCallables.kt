@@ -62,7 +62,5 @@ suspend fun <R> KCallable<R>.callSuspendBy(args: Map<KParameter, Any?>): R {
     if (!this.isSuspend) return callBy(args)
     if (this !is KFunction<*>) throw IllegalArgumentException("Cannot callSuspendBy on a property $this: suspend properties are not supported yet")
     val kCallable = asKCallableImpl() ?: throw KotlinReflectionInternalError("This callable does not support a default call: $this")
-    val continuation: Continuation<*> = suspendCoroutineUninterceptedOrReturn { it }
-    @Suppress("UNCHECKED_CAST")
-    return kCallable.callDefaultMethod(args, continuation) as R
+    return suspendCoroutineUninterceptedOrReturn<R> { kCallable.callDefaultMethod(args, it) }
 }

@@ -97,11 +97,11 @@ internal abstract class KCallableImpl<out R> : KCallable<R> {
     }
 
     override fun callBy(args: Map<KParameter, Any?>): R {
-        return if (isAnnotationConstructor) callAnnotationConstructor(args) else callDefaultMethod(args)
+        return if (isAnnotationConstructor) callAnnotationConstructor(args) else callDefaultMethod(args, null)
     }
 
     // See ArgumentGenerator#generate
-    internal fun callDefaultMethod(args: Map<KParameter, Any?>, continuationArgument: Continuation<*>? = null): R {
+    internal fun callDefaultMethod(args: Map<KParameter, Any?>, continuationArgument: Continuation<*>?): R {
         val parameters = parameters
         val arguments = ArrayList<Any?>(parameters.size)
         var mask = 0

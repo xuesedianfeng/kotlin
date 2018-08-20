@@ -82,5 +82,4 @@ public interface KCallable<out R> : KAnnotatedElement {
      */
     @SinceKotlin("1.3")
     public val isSuspend: Boolean
-        get() = false
 }
