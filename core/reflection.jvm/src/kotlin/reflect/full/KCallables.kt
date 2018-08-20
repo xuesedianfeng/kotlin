@@ -43,22 +43,24 @@ fun KCallable<*>.findParameterByName(name: String): KParameter? {
 }
 
 /**
- * Call a suspend function in current suspend context.
+ * Calls a callable in the current suspend context. If callable is not a suspend function, behaves as [KCallable.call] function.
+ * Otherwise, calls the suspend function with current continuation.
  */
 @SinceKotlin("1.3")
 suspend fun <R> KCallable<R>.callSuspend(vararg args: Any?): R {
+    if (!this.isSuspend) return call(args)
     if (this !is KFunction<*>) throw IllegalArgumentException("Cannot callSuspend on a property $this: suspend properties are not supported yet")
-    if (!this.isSuspend) throw IllegalArgumentException("Cannot callSuspend on non-suspend function: $this")
     return suspendCoroutineUninterceptedOrReturn { call(*args, it) }
 }
 
 /**
- * Call a suspend function in current suspend context.
+ * Calls a callable in the current suspend context. If callable is not a suspend function, behaves as [KCallable.callBy] function.
+ * Otherwise, calls the suspend function with current continuation.
  */
 @SinceKotlin("1.3")
 suspend fun <R> KCallable<R>.callSuspendBy(args: Map<KParameter, Any?>): R {
+    if (!this.isSuspend) return callBy(args)
     if (this !is KFunction<*>) throw IllegalArgumentException("Cannot callSuspendBy on a property $this: suspend properties are not supported yet")
-    if (!this.isSuspend) throw IllegalArgumentException("Cannot callSuspendBy on non-suspend function: $this")
     if (parameters.any { it.isOptional }) {
         val kCallable = asKCallableImpl() ?: throw KotlinReflectionInternalError("This callable does not support a default call: $this")
         val continuation: Continuation<*> = suspendCoroutineUninterceptedOrReturn { it }

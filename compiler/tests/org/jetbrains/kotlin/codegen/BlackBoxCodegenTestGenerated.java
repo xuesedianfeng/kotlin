@@ -7374,11 +7374,6 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             public void testCallSuspendBy() throws Exception {
                 runTest("compiler/testData/codegen/box/coroutines/reflect/callSuspendBy.kt");
             }
-
-            @TestMetadata("isSuspend.kt")
-            public void testIsSuspend() throws Exception {
-                runTest("compiler/testData/codegen/box/coroutines/reflect/isSuspend.kt");
-            }
         }
 
         @TestMetadata("compiler/testData/codegen/box/coroutines/stackUnwinding")
