@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.load.java.descriptors.JavaCallableMemberDescriptor
 import java.lang.reflect.Type
 import java.util.*
+import kotlin.coroutines.Continuation
 import kotlin.reflect.*
 import kotlin.reflect.jvm.javaType
 
@@ -100,7 +101,7 @@ internal abstract class KCallableImpl<out R> : KCallable<R> {
     }
 
     // See ArgumentGenerator#generate
-    internal fun callDefaultMethod(args: Map<KParameter, Any?>, additionalArguments: () -> List<Any?> = { emptyList() }): R {
+    internal fun callDefaultMethod(args: Map<KParameter, Any?>, continuationArgument: Continuation<*>? = null): R {
         val parameters = parameters
         val arguments = ArrayList<Any?>(parameters.size)
         var mask = 0
@@ -133,7 +134,9 @@ internal abstract class KCallableImpl<out R> : KCallable<R> {
             }
         }
 
-        arguments.addAll(additionalArguments())
+        if (continuationArgument != null) {
+            arguments.add(continuationArgument)
+        }
 
         if (!anyOptional) {
             return call(*arguments.toTypedArray())

@@ -6224,6 +6224,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
             public void testCallSuspendBy() throws Exception {
                 runTest("compiler/testData/codegen/box/coroutines/reflect/callSuspendBy.kt");
             }
+
+            @TestMetadata("isSuspend12.kt")
+            public void testIsSuspend12() throws Exception {
+                runTest("compiler/testData/codegen/box/coroutines/reflect/isSuspend12.kt");
+            }
         }
 
         @TestMetadata("compiler/testData/codegen/box/coroutines/stackUnwinding")

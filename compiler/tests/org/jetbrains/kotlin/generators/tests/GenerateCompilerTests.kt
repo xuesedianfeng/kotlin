@@ -345,9 +345,9 @@ fun main(args: Array<String>) {
             model("codegen/boxAgainstJava", targetBackend = TargetBackend.JVM_IR)
         }
 
-//        testClass<AbstractIrCheckLocalVariablesTableTest> {
-//            model("checkLocalVariablesTable", targetBackend = TargetBackend.JVM_IR)
-//        }
+        testClass<AbstractIrCheckLocalVariablesTableTest> {
+            model("checkLocalVariablesTable", targetBackend = TargetBackend.JVM_IR)
+        }
 
         testClass<AbstractIrBlackBoxInlineCodegenTest> {
             model("codegen/boxInline", targetBackend = TargetBackend.JVM_IR)

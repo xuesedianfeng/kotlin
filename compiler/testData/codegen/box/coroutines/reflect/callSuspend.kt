@@ -18,7 +18,7 @@ class A {
 
 suspend fun twoArgs(a: String, b: String) = "$a$b"
 
-fun ordinary() {}
+fun ordinary() = "OK"
 
 fun box(): String {
     var res: String? = ""
@@ -35,9 +35,7 @@ fun box(): String {
     }
     if (res != "OK") return res ?: "FAIL 3"
     builder {
-        try {
-            res = ::ordinary.callSuspend() as String?
-        } catch (expected: IllegalArgumentException) {}
+        res = ::ordinary.callSuspend() as String?
     }
     return res ?: "FAIL 4"
 }
