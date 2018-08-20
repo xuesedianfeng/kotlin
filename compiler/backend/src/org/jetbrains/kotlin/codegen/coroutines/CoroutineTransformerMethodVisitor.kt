@@ -47,10 +47,13 @@ class CoroutineTransformerMethodVisitor(
     private val shouldPreserveClassInitialization: Boolean,
     private val lineNumber: Int,
     private val languageVersionSettings: LanguageVersionSettings,
+    private val sourceFile: String,
     // It's only matters for named functions, may differ from '!isStatic(access)' in case of DefaultImpls
     private val needDispatchReceiver: Boolean = false,
     // May differ from containingClassInternalName in case of DefaultImpls
-    private val internalNameForDispatchReceiver: String? = null
+    private val internalNameForDispatchReceiver: String? = null,
+    // For crossinline lambdas we do not generate DebugMetadata annotation, otherwise it will be generated twice
+    private val isCrossinlineLambda: Boolean = false
 ) : TransformationMethodVisitor(delegate, access, name, desc, signature, exceptions) {
 
     private val classBuilderForCoroutineState: ClassBuilder by lazy(obtainClassBuilderForCoroutineState)
@@ -109,7 +112,7 @@ class CoroutineTransformerMethodVisitor(
 
         UninitializedStoresProcessor(methodNode, shouldPreserveClassInitialization).run()
 
-        spillVariables(suspensionPoints, methodNode)
+        val spilledToVariableMapping = spillVariables(suspensionPoints, methodNode)
 
         val suspendMarkerVarIndex = methodNode.maxLocals++
 
@@ -118,9 +121,9 @@ class CoroutineTransformerMethodVisitor(
         }
 
         val defaultLabel = LabelNode()
+        val tableSwitchLabel = LabelNode()
         methodNode.instructions.apply {
             val startLabel = LabelNode()
-            val tableSwitchLabel = LabelNode()
 
             // tableswitch(this.label)
             insertBefore(
@@ -164,6 +167,41 @@ class CoroutineTransformerMethodVisitor(
                 defaultLabel
             )
         }
+
+        if (languageVersionSettings.isReleaseCoroutines() && !isCrossinlineLambda) {
+            writeDebugMetadata(listOf(tableSwitchLabel) + suspensionPointLabels.map {
+                it.label.info.safeAs<LabelNode>().sure { "suspensionPointLabel shall have valid info. Check state-machine generation." }
+            }, spilledToVariableMapping)
+        }
+    }
+
+    private fun writeDebugMetadata(
+        suspensionPointLabels: List<LabelNode>,
+        spilledToVariableMapping: List<List<Pair<String, String>>>
+    ) {
+        val lines = suspensionPointLabels.map { label ->
+            label.safeAs<AbstractInsnNode>()?.findNextOrNull { it is LineNumberNode }.safeAs<LineNumberNode>()
+                .sure { "lineNumber of label $label is not found, check state machine generation" }.line
+        }
+        val metadata = classBuilderForCoroutineState.newAnnotation(debugMetadataAnnotationAsmType.descriptor, true)
+        // TODO: support inlined functions (similar to SMAP)
+        metadata.visitArray("runtimeSourceFiles").also { v ->
+            lines.forEach { v.visit(null, sourceFile) }
+        }.visitEnd()
+        metadata.visit("runtimeLineNumbers", lines.toTypedArray().toIntArray())
+
+        val debugIndexToLabel = spilledToVariableMapping.withIndex().flatMap { (labelIndex, list) ->
+            list.map { labelIndex }
+        }
+        val (debugSpilled, debugLocalNames) = spilledToVariableMapping.flatten().unzip()
+        metadata.visit("debugIndexToLabel", debugIndexToLabel.toTypedArray().toIntArray())
+        metadata.visitArray("debugSpilled").also { v ->
+            debugSpilled.forEach { v.visit(null, it) }
+        }.visitEnd()
+        metadata.visitArray("debugLocalNames").also { v ->
+            debugLocalNames.forEach { v.visit(null, it) }
+        }.visitEnd()
+        metadata.visitEnd()
     }
 
     private fun addContinuationToLvt(methodNode: MethodNode, startLabel: LabelNode, endLabel: LabelNode) {
@@ -307,7 +345,7 @@ class CoroutineTransformerMethodVisitor(
             visitLabel(afterCoroutineStateCreated)
 
             visitVarInsn(Opcodes.ALOAD, continuationIndex)
-            getfield(classBuilderForCoroutineState.thisName, DATA_FIELD_NAME, AsmTypes.OBJECT_TYPE.descriptor)
+            getfield(classBuilderForCoroutineState.thisName, languageVersionSettings.dataFieldName(), AsmTypes.OBJECT_TYPE.descriptor)
             visitVarInsn(Opcodes.ASTORE, dataIndex)
 
             if (!languageVersionSettings.isReleaseCoroutines()) {
@@ -364,7 +402,7 @@ class CoroutineTransformerMethodVisitor(
         }
     }
 
-    private fun spillVariables(suspensionPoints: List<SuspensionPoint>, methodNode: MethodNode) {
+    private fun spillVariables(suspensionPoints: List<SuspensionPoint>, methodNode: MethodNode): List<List<Pair<String, String>>> {
         val instructions = methodNode.instructions
         val frames = performRefinedTypeAnalysis(methodNode, containingClassInternalName)
         fun AbstractInsnNode.index() = instructions.indexOf(this)
@@ -373,6 +411,7 @@ class CoroutineTransformerMethodVisitor(
         val postponedActions = mutableListOf<() -> Unit>()
         val maxVarsCountByType = mutableMapOf<Type, Int>()
         val livenessFrames = analyzeLiveness(methodNode)
+        val spilledToVariableMapping = arrayListOf<List<Pair<String, String>>>()
 
         for (suspension in suspensionPoints) {
             val suspensionCallBegin = suspension.suspensionCallBegin
@@ -398,6 +437,8 @@ class CoroutineTransformerMethodVisitor(
             // So we only spill variables that are alive at the begin of suspension point.
             // NB: it's also rather useful for sake of optimization
             val livenessFrame = livenessFrames[suspensionCallBegin.index()]
+
+            val spilledToVariable = arrayListOf<Pair<String, String>>()
 
             // 0 - this
             // 1 - parameter
@@ -434,6 +475,7 @@ class CoroutineTransformerMethodVisitor(
                 varsCountByType[normalizedType] = indexBySort
 
                 val fieldName = normalizedType.fieldNameForVar(indexBySort)
+                localVariableName(methodNode, index, livenessFrames)?.also { spilledToVariable.add(fieldName to it) }
 
                 postponedActions.add {
                     with(instructions) {
@@ -456,6 +498,8 @@ class CoroutineTransformerMethodVisitor(
                 }
             }
 
+            spilledToVariableMapping.add(spilledToVariable)
+
             varsCountByType.forEach {
                 maxVarsCountByType[it.key] = Math.max(maxVarsCountByType[it.key] ?: 0, it.value)
             }
@@ -472,7 +516,13 @@ class CoroutineTransformerMethodVisitor(
                 )
             }
         }
+        return spilledToVariableMapping
     }
+
+    private fun localVariableName(methodNode: MethodNode, index: Int, livenessFrames: List<VariableLivenessFrame>): String? =
+        methodNode.localVariables.find {
+            index == it.index && livenessFrames[methodNode.instructions.indexOf(it.start)].isAlive(index)
+        }?.name
 
     /**
      * See 'splitTryCatchBlocksContainingSuspensionPoint'
