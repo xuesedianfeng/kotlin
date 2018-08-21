@@ -7,6 +7,6 @@ package kotlin.coroutines
 
 /**
  * This is neccesary to force generation of coroutines.kotlin_builtins file, thus providing builtin package fragment for kotlin.coroutines
- * package. This way we can use koltin.coroutines.SuspendFunction{N} interfaces in code.
+ * package. This way we can use kotlin.coroutines.SuspendFunction{N} interfaces in code.
  */
 private fun hackToForceKotlinBuiltinsForKotlinCoroutinesPackage() {}

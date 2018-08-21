@@ -108,7 +108,10 @@ class FunctionClassDescriptor(
         override fun computeSupertypes(): Collection<KotlinType> {
             val result = ArrayList<KotlinType>(2)
 
-            fun addDescriptor(descriptor: ClassDescriptor) {
+            fun add(packageFragment: PackageFragmentDescriptor, name: Name) {
+                val descriptor = packageFragment.getMemberScope().getContributedClassifier(name, NoLookupLocation.FROM_BUILTINS) as? ClassDescriptor
+                    ?: error("Class $name not found in $packageFragment")
+
                 val typeConstructor = descriptor.typeConstructor
 
                 // Substitute all type parameters of the super class with our last type parameters
@@ -119,21 +122,9 @@ class FunctionClassDescriptor(
                 result.add(KotlinTypeFactory.simpleNotNullType(Annotations.EMPTY, descriptor, arguments))
             }
 
-            fun add(packageFragment: PackageFragmentDescriptor, name: Name) {
-                val descriptor =
-                    packageFragment.getMemberScope().getContributedClassifier(name, NoLookupLocation.FROM_BUILTINS) as? ClassDescriptor
-                        ?: error("Class $name not found in $packageFragment")
-                addDescriptor(descriptor)
-            }
-
             when (functionKind) {
-                Kind.SuspendFunction -> {
-                    // SuspendFunction$N<...> <: Function
-                    assert(containingDeclaration.fqName == COROUTINES_PACKAGE_FQ_NAME_RELEASE) {
-                        "numbered SuspendFunction interfaces shall be in $COROUTINES_PACKAGE_FQ_NAME_RELEASE package"
-                    }
+                Kind.SuspendFunction -> // SuspendFunction$N<...> <: Function
                     add(builtIns.builtInsPackageFragment, Name.identifier("Function"))
-                }
                 Kind.KSuspendFunction -> // KSuspendFunction$N<...> <: KFunction
                     add(containingDeclaration, Name.identifier("KFunction"))
                 else -> // Add unnumbered base class, e.g. Function for Function{n}, KFunction for KFunction{n}
@@ -149,7 +140,10 @@ class FunctionClassDescriptor(
                     add(kotlinPackageFragment, Kind.Function.numberedClassName(arity))
                 }
                 Kind.KSuspendFunction -> {
-                    addDescriptor(builtIns.getSuspendFunction(arity))
+                    val packageView = containingDeclaration.containingDeclaration.getPackage(COROUTINES_PACKAGE_FQ_NAME_RELEASE)
+                    val coroutinesPackageFragment = packageView.fragments.filterIsInstance<BuiltInsPackageFragment>().first()
+
+                    add(coroutinesPackageFragment, Kind.SuspendFunction.numberedClassName(arity))
                 }
                 else -> {
                 }
