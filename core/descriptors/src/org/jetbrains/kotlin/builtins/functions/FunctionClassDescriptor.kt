@@ -129,7 +129,9 @@ class FunctionClassDescriptor(
             when (functionKind) {
                 Kind.SuspendFunction -> {
                     // SuspendFunction$N<...> <: Function
-                    assert(containingDeclaration.fqName == COROUTINES_PACKAGE_FQ_NAME_RELEASE)
+                    assert(containingDeclaration.fqName == COROUTINES_PACKAGE_FQ_NAME_RELEASE) {
+                        "numbered SuspendFunction interfaces shall be in $COROUTINES_PACKAGE_FQ_NAME_RELEASE package"
+                    }
                     add(builtIns.builtInsPackageFragment, Name.identifier("Function"))
                 }
                 Kind.KSuspendFunction -> // KSuspendFunction$N<...> <: KFunction
