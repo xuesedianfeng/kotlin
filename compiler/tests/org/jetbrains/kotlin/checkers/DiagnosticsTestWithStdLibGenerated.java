@@ -1558,11 +1558,6 @@ public class DiagnosticsTestWithStdLibGenerated extends AbstractDiagnosticsTestW
             runTest("compiler/testData/diagnostics/testsWithStdLib/coroutines/suspendFunctionN.kt");
         }
 
-        @TestMetadata("suspendFunctionN12.kt")
-        public void testSuspendFunctionN12() throws Exception {
-            runTest("compiler/testData/diagnostics/testsWithStdLib/coroutines/suspendFunctionN12.kt");
-        }
-
         @TestMetadata("suspendFunctions.kt")
         public void testSuspendFunctions_1_2() throws Exception {
             runTestWithPackageReplacement("compiler/testData/diagnostics/testsWithStdLib/coroutines/suspendFunctions.kt", "kotlin.coroutines.experimental");
