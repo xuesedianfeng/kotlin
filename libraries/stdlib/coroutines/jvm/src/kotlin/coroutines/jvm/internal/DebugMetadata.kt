@@ -11,49 +11,46 @@ import kotlin.coroutines.Continuation
 @Target(AnnotationTarget.CLASS)
 @SinceKotlin("1.3")
 internal annotation class DebugMetadata(
-    // @JvmName("a")
-    val runtimeSourceFiles: Array<String>,
-    // @JvmName("b")
-    val runtimeLineNumbers: IntArray,
+    // @JvmName("r")
+    val sourceFiles: Array<String>,
+    // @JvmName("l")
+    val lineNumbers: IntArray,
+    // @JvmName("n")
+    val localNames: Array<String>,
+    // @JvmName("s")
+    val spilled: Array<String>,
+    // @JvmName("i")
+    val indexToLabel: IntArray,
+    // @JvmName("m")
+    val methodName: String,
     // @JvmName("c")
-    val debugLocalNames: Array<String>,
-    // @JvmName("d")
-    val debugSpilled: Array<String>,
-    // @JvmName("e")
-    val debugIndexToLabel: IntArray
+    val className: String
 )
 
 /**
- * Returns file name and line number of current coroutine's suspension point. The coroutine can be either running coroutine, that calls
- * the function on its continuation and obtaining the information about current file and line number, or, more likely, the function is
- * called to produce debug-friendly [toString] output of suspended coroutine (i.e. where it has suspended).
- * Additionally, the function is used to obtain [StackTraceElement]s from continuations' stack in order to create more natural stack traces.
+ * Returns [StackTraceElement] containing file name and line number of current coroutine's suspension point.
+ * The coroutine can be either running coroutine, that calls the function on its continuation and obtaining
+ * the information about current file and line number, or, more likely, the function is called to produce accurate stack traces of
+ * suspended coroutine.
  */
 @SinceKotlin("1.3")
-public fun getSourceFileAndLineNumber(c: Continuation<*>): Pair<String, Int> {
-    val debugMetadata = c.getDebugMetadataAnnotation()
-    return debugMetadata.runtimeSourceFiles.zip(debugMetadata.runtimeLineNumbers.asList())[c.getLabel() ?: return "" to -1]
+@JvmName("getStackTraceElement")
+internal fun BaseContinuationImpl.getStackTraceElement(): StackTraceElement? {
+    val debugMetadata = getDebugMetadataAnnotation()
+    val label = getLabel()
+    val fileName = if (label < 0) "" else debugMetadata.sourceFiles[label]
+    val lineNumber = if (label < 0) -1 else debugMetadata.lineNumbers[label]
+    return StackTraceElement(debugMetadata.className, debugMetadata.methodName, fileName, lineNumber)
 }
 
-/**
- * The same as [getSourceFileAndLineNumber], but returns [String] instead of [Pair] to simplify data extraction on debugger's end.
- * The return string has the following pattern: "$fileName:$lineNumber".
- */
-@SinceKotlin("1.3")
-public fun getSourceFileAndLineNumberForDebugger(c: Continuation<*>): String {
-    val pair = getSourceFileAndLineNumber(c)
-    return if (pair.second < 0) "" else "${pair.first}:${pair.second}"
-}
-
-private fun Continuation<*>.getDebugMetadataAnnotation(): DebugMetadata {
-    this as BaseContinuationImpl
+private fun BaseContinuationImpl.getDebugMetadataAnnotation(): DebugMetadata {
     return javaClass.annotations.filterIsInstance<DebugMetadata>()[0]
 }
 
-private fun Continuation<*>.getLabel(): Int? {
-    val field = javaClass.getDeclaredField("label") ?: return null
+private fun BaseContinuationImpl.getLabel(): Int {
+    val field = javaClass.getDeclaredField("label") ?: return -1
     field.isAccessible = true
-    return field.get(this) as Int - 1
+    return (field.get(this) as? Int ?: 0) - 1
 }
 
 /**
@@ -62,18 +59,18 @@ private fun Continuation<*>.getLabel(): Int? {
  * - field names take 2*k'th indices
  * - corresponding variable names take (2*k + 1)'th indices.
  *
- * Like [getSourceFileAndLineNumberForDebugger], the function is for debugger to use, thus it returns simplest data type possible.
+ * The function is for debugger to use, thus it returns simplest data type possible.
  * This function should only be called on suspended coroutines to get accurate mapping.
  */
 @SinceKotlin("1.3")
-public fun getVariableToSpilledMapping(c: Continuation<*>): Array<String> {
-    val debugMetadata = c.getDebugMetadataAnnotation()
+internal fun BaseContinuationImpl.getSpilledVariableFieldMapping(): Array<String> {
+    val debugMetadata = getDebugMetadataAnnotation()
     val res = arrayListOf<String>()
-    val label = c.getLabel()
-    for ((i, labelOfIndex) in debugMetadata.debugIndexToLabel.withIndex()) {
+    val label = getLabel()
+    for ((i, labelOfIndex) in debugMetadata.indexToLabel.withIndex()) {
         if (labelOfIndex == label) {
-            res.add(debugMetadata.debugSpilled[i])
-            res.add(debugMetadata.debugLocalNames[i])
+            res.add(debugMetadata.spilled[i])
+            res.add(debugMetadata.localNames[i])
         }
     }
     return res.toTypedArray()

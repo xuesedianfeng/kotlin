@@ -2753,12 +2753,6 @@ public final class kotlin/coroutines/intrinsics/IntrinsicsKt {
 	public static final fun intercepted (Lkotlin/coroutines/Continuation;)Lkotlin/coroutines/Continuation;
 }
 
-public final class kotlin/coroutines/jvm/internal/DebugMetadataKt {
-	public static final fun getSourceFileAndLineNumber (Lkotlin/coroutines/Continuation;)Lkotlin/Pair;
-	public static final fun getSourceFileAndLineNumberForDebugger (Lkotlin/coroutines/Continuation;)Ljava/lang/String;
-	public static final fun getVariableToSpilledMapping (Lkotlin/coroutines/Continuation;)[Ljava/lang/String;
-}
-
 public final class kotlin/internal/PlatformImplementationsKt {
 	public static final fun apiVersionIsAtLeast (III)Z
 }

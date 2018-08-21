@@ -5,13 +5,15 @@
 // WITH_RUNTIME
 // WITH_COROUTINES
 
+@file:Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER", "CANNOT_OVERRIDE_INVISIBLE_MEMBER")
+
 import helpers.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 import kotlin.coroutines.jvm.internal.*
 
-suspend fun getVariableToSpilled() = suspendCoroutineUninterceptedOrReturn<Array<String>> {
-    getVariableToSpilledMapping(it)
+suspend fun getSpilledToVariable() = suspendCoroutineUninterceptedOrReturn<Array<String>> {
+    (it as BaseContinuationImpl).getSpilledVariableFieldMapping()
 }
 
 fun Array<String>.toMap(): Map<String, String> {
@@ -22,7 +24,7 @@ fun Array<String>.toMap(): Map<String, String> {
     return res
 }
 
-var continuation: Continuation<*>? = null
+var continuation: Continuation<Unit>? = null
 
 suspend fun suspendHere() = suspendCoroutineUninterceptedOrReturn<Unit> {
     continuation = it
@@ -42,7 +44,7 @@ suspend fun named(): String {
     val s7 = ""
     val s8 = ""
     val s9 = ""
-    val map = getVariableToSpilled().toMap()
+    val map = getSpilledToVariable().toMap()
     return map["L$0"] + map["L$1"] + map["L$2"] + map["L$3"] + map["L$4"] + map["L$5"] + map["L$6"] + map["L$7"] + map["L$8"]
 }
 
@@ -50,6 +52,15 @@ suspend fun suspended() {
     dummy()
     val ss = ""
     suspendHere()
+}
+
+suspend fun multipleLocalsInOneSlot() {
+    for (first in 0 until 1) {
+        suspendHere()
+    }
+    for (second in 0 until 1) {
+        suspendHere()
+    }
 }
 
 fun builder(c: suspend () -> Unit) {
@@ -67,7 +78,7 @@ fun box(): String {
     builder {
         dummy()
         val a = ""
-        res = getVariableToSpilled().toMap()["L$0"] ?: "lambda fail"
+        res = getSpilledToVariable().toMap()["L$0"] ?: "lambda fail"
     }
     if (res != "a") {
         return "" + res
@@ -76,9 +87,23 @@ fun box(): String {
     builder {
         suspended()
     }
-    res = getVariableToSpilledMapping(continuation!!).toMap()["L$0"] ?: "suspended fail"
+    res = (continuation!! as BaseContinuationImpl).getSpilledVariableFieldMapping().toMap()["L$0"] ?: "suspended fail"
     if (res != "ss") {
         return "" + res
     }
+
+    builder {
+        multipleLocalsInOneSlot()
+    }
+    res = (continuation!! as BaseContinuationImpl).getSpilledVariableFieldMapping().toMap()["I$0"] ?: "multipleLocalsInOneSlot fail 1"
+    if (res != "first") {
+        return "" + res
+    }
+    continuation!!.resumeWith(SuccessOrFailure.success(Unit))
+    res = (continuation!! as BaseContinuationImpl).getSpilledVariableFieldMapping().toMap()["I$0"] ?: "multipleLocalsInOneSlot fail 2"
+    if (res != "second") {
+        return "" + res
+    }
+
     return "OK"
 }

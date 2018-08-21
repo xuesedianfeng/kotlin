@@ -3,15 +3,22 @@
 // IGNORE_BACKEND: JVM_IR
 // TARGET_BACKEND: JVM
 // WITH_RUNTIME
+// FULL_JDK
 // WITH_COROUTINES
+
+@file:Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER", "CANNOT_OVERRIDE_INVISIBLE_MEMBER")
 
 import helpers.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 import kotlin.coroutines.jvm.internal.*
 
+private fun BaseContinuationImpl.getSourceFileAndLineNumber(): Pair<String, Int> {
+    return (getStackTraceElement()?.fileName ?: "") to (getStackTraceElement()?.lineNumber ?: -1)
+}
+
 suspend fun getSourceFileAndLineNumberFromContinuation() = suspendCoroutineUninterceptedOrReturn<Pair<String, Int>> {
-    getSourceFileAndLineNumber(it)
+    (it as BaseContinuationImpl).getSourceFileAndLineNumber()
 }
 
 var continuation: Continuation<*>? = null
@@ -42,22 +49,22 @@ fun box(): String {
     builder {
         res = named()
     }
-    if (res != Pair("runtimeDebugMetadata.kt", 28)) {
+    if (res != Pair("runtimeDebugMetadata.kt", 35)) {
         return "" + res
     }
     builder {
         dummy()
         res = getSourceFileAndLineNumberFromContinuation()
     }
-    if (res != Pair("runtimeDebugMetadata.kt", 50)) {
+    if (res != Pair("runtimeDebugMetadata.kt", 57)) {
         return "" + res
     }
 
     builder {
         suspended()
     }
-    res = getSourceFileAndLineNumber(continuation!!)
-    if (res != Pair("runtimeDebugMetadata.kt", 33)) {
+    res = (continuation!! as BaseContinuationImpl).getSourceFileAndLineNumber()
+    if (res != Pair("runtimeDebugMetadata.kt", 40)) {
         return "" + res
     }
     return "OK"

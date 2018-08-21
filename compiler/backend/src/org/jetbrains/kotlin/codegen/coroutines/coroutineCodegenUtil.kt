@@ -56,7 +56,7 @@ const val DO_RESUME_METHOD_NAME = "doResume"
 const val INVOKE_SUSPEND_METHOD_NAME = "invokeSuspend"
 const val EXCEPTION_FIELD_NAME = "exception"
 
-val releaseCoroutinesVersionSettings = LanguageVersionSettingsImpl(LanguageVersion.KOTLIN_1_3, ApiVersion.KOTLIN_1_3)
+private val RELEASE_COROUTINES_VERSION_SETTINGS = LanguageVersionSettingsImpl(LanguageVersion.KOTLIN_1_3, ApiVersion.KOTLIN_1_3)
 
 fun LanguageVersionSettings.isResumeImplMethodName(name: String) =
     if (isReleaseCoroutines())
@@ -71,7 +71,7 @@ fun isResumeImplMethodNameFromAnyLanguageSettings(name: String) = name == INVOKE
 fun LanguageVersionSettings.coroutinesJvmInternalPackageFqName() =
     coroutinesPackageFqName().child(Name.identifier("jvm")).child(Name.identifier("internal"))
 
-val debugMetadataAnnotationAsmType = releaseCoroutinesVersionSettings.coroutinesJvmInternalPackageFqName()
+val DEBUG_METADATA_ANNOTATION_ASM_TYPE = RELEASE_COROUTINES_VERSION_SETTINGS.coroutinesJvmInternalPackageFqName()
     .child(Name.identifier("DebugMetadata")).topLevelClassAsmType()
 
 fun LanguageVersionSettings.continuationAsmType() =
