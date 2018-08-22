@@ -180,7 +180,7 @@ class CoroutineTransformerMethodVisitor(
     private fun writeDebugMetadata(
         methodNode: MethodNode,
         suspensionPointLabels: List<LabelNode>,
-        spilledToLocalMapping: List<List<SpilledAndLocalNames>>
+        spilledToLocalMapping: List<List<SpilledVariableDescriptor>>
     ) {
         val lines = suspensionPointLabels.map { label ->
             label.safeAs<AbstractInsnNode>()?.findNextOrNull { it is LineNumberNode }.safeAs<LineNumberNode>()?.line ?: -1
@@ -198,10 +198,10 @@ class CoroutineTransformerMethodVisitor(
         val variablesMapping = spilledToLocalMapping.flatten()
         metadata.visit("indexToLabel", debugIndexToLabel.toIntArray())
         metadata.visitArray("spilled").also { v ->
-            variablesMapping.forEach { v.visit(null, it.spilled) }
+            variablesMapping.forEach { v.visit(null, it.fieldName) }
         }.visitEnd()
         metadata.visitArray("localNames").also { v ->
-            variablesMapping.forEach { v.visit(null, it.local) }
+            variablesMapping.forEach { v.visit(null, it.variableName) }
         }.visitEnd()
         metadata.visit("methodName", methodNode.name)
         metadata.visit("className", containingClassInternalName)
@@ -406,7 +406,7 @@ class CoroutineTransformerMethodVisitor(
         }
     }
 
-    private fun spillVariables(suspensionPoints: List<SuspensionPoint>, methodNode: MethodNode): List<List<SpilledAndLocalNames>> {
+    private fun spillVariables(suspensionPoints: List<SuspensionPoint>, methodNode: MethodNode): List<List<SpilledVariableDescriptor>> {
         val instructions = methodNode.instructions
         val frames = performRefinedTypeAnalysis(methodNode, containingClassInternalName)
         fun AbstractInsnNode.index() = instructions.indexOf(this)
@@ -415,7 +415,7 @@ class CoroutineTransformerMethodVisitor(
         val postponedActions = mutableListOf<() -> Unit>()
         val maxVarsCountByType = mutableMapOf<Type, Int>()
         val livenessFrames = analyzeLiveness(methodNode)
-        val spilledToVariableMapping = arrayListOf<List<SpilledAndLocalNames>>()
+        val spilledToVariableMapping = arrayListOf<List<SpilledVariableDescriptor>>()
 
         for (suspension in suspensionPoints) {
             val suspensionCallBegin = suspension.suspensionCallBegin
@@ -442,7 +442,7 @@ class CoroutineTransformerMethodVisitor(
             // NB: it's also rather useful for sake of optimization
             val livenessFrame = livenessFrames[suspensionCallBegin.index()]
 
-            val spilledToVariable = arrayListOf<SpilledAndLocalNames>()
+            val spilledToVariable = arrayListOf<SpilledVariableDescriptor>()
 
             // 0 - this
             // 1 - parameter
@@ -479,8 +479,8 @@ class CoroutineTransformerMethodVisitor(
                 varsCountByType[normalizedType] = indexBySort
 
                 val fieldName = normalizedType.fieldNameForVar(indexBySort)
-                localVariableName(methodNode, index, livenessFrames, suspension.suspensionCallEnd.next.index())
-                    ?.also { spilledToVariable.add(SpilledAndLocalNames(fieldName, it)) }
+                localVariableName(methodNode, index, suspension.suspensionCallEnd.next.index())
+                    ?.let { spilledToVariable.add(SpilledVariableDescriptor(fieldName, it)) }
 
                 postponedActions.add {
                     with(instructions) {
@@ -527,12 +527,10 @@ class CoroutineTransformerMethodVisitor(
     private fun localVariableName(
         methodNode: MethodNode,
         index: Int,
-        livenessFrames: List<VariableLivenessFrame>,
         suspensionCallIndex: Int
     ): String? {
         val variable = methodNode.localVariables.find {
-            index == it.index && livenessFrames[suspensionCallIndex].isAlive(index)
-                    && methodNode.instructions.indexOf(it.start) <= suspensionCallIndex
+            index == it.index && methodNode.instructions.indexOf(it.start) <= suspensionCallIndex
                     && suspensionCallIndex < methodNode.instructions.indexOf(it.end)
         }
         return variable?.name
@@ -702,7 +700,7 @@ class CoroutineTransformerMethodVisitor(
         return
     }
 
-    private data class SpilledAndLocalNames(val spilled: String, val local: String)
+    private data class SpilledVariableDescriptor(val fieldName: String, val variableName: String)
 }
 
 internal fun InstructionAdapter.generateContinuationConstructorCall(
