@@ -124,7 +124,7 @@ class FunctionClassDescriptor(
 
             when (functionKind) {
                 Kind.SuspendFunction -> // SuspendFunction$N<...> <: Function
-                    add(builtIns.builtInsPackageFragment, Name.identifier("Function"))
+                    add(getBuiltInPackage(BUILT_INS_PACKAGE_FQ_NAME), Name.identifier("Function"))
                 Kind.KSuspendFunction -> // KSuspendFunction$N<...> <: KFunction
                     add(containingDeclaration, Name.identifier("KFunction"))
                 else -> // Add unnumbered base class, e.g. Function for Function{n}, KFunction for KFunction{n}
@@ -133,23 +133,21 @@ class FunctionClassDescriptor(
 
             // For K{Suspend}Function{n}, add corresponding numbered {Suspend}Function{n} class, e.g. {Suspend}Function2 for K{Suspend}Function2
             when (functionKind) {
-                Kind.KFunction -> {
-                    val packageView = containingDeclaration.containingDeclaration.getPackage(BUILT_INS_PACKAGE_FQ_NAME)
-                    val kotlinPackageFragment = packageView.fragments.filterIsInstance<BuiltInsPackageFragment>().first()
-
-                    add(kotlinPackageFragment, Kind.Function.numberedClassName(arity))
-                }
-                Kind.KSuspendFunction -> {
-                    val packageView = containingDeclaration.containingDeclaration.getPackage(COROUTINES_PACKAGE_FQ_NAME_RELEASE)
-                    val coroutinesPackageFragment = packageView.fragments.filterIsInstance<BuiltInsPackageFragment>().first()
-
-                    add(coroutinesPackageFragment, Kind.SuspendFunction.numberedClassName(arity))
-                }
+                Kind.KFunction -> add(getBuiltInPackage(BUILT_INS_PACKAGE_FQ_NAME), Kind.Function.numberedClassName(arity))
+                Kind.KSuspendFunction -> add(
+                    getBuiltInPackage(COROUTINES_PACKAGE_FQ_NAME_RELEASE),
+                    Kind.SuspendFunction.numberedClassName(arity)
+                )
                 else -> {
                 }
             }
 
             return result.toList()
+        }
+
+        private fun getBuiltInPackage(fqName: FqName): BuiltInsPackageFragment {
+            val packageView = containingDeclaration.containingDeclaration.getPackage(fqName)
+            return packageView.fragments.filterIsInstance<BuiltInsPackageFragment>().first()
         }
 
         override fun getParameters() = this@FunctionClassDescriptor.parameters
