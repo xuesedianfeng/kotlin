@@ -17,10 +17,10 @@ public annotation class ExperimentalContracts
 @ExperimentalContracts
 @SinceKotlin("1.3")
 public interface ContractBuilder {
-    @ContractsDsl fun returns(): Returns
-    @ContractsDsl fun returns(value: Any?): Returns
-    @ContractsDsl fun returnsNotNull(): ReturnsNotNull
-    @ContractsDsl fun <R> callsInPlace(lambda: Function<R>, kind: InvocationKind = InvocationKind.UNKNOWN): CallsInPlace
+    @ContractsDsl public fun returns(): Returns
+    @ContractsDsl public fun returns(value: Any?): Returns
+    @ContractsDsl public fun returnsNotNull(): ReturnsNotNull
+    @ContractsDsl public fun <R> callsInPlace(lambda: Function<R>, kind: InvocationKind = InvocationKind.UNKNOWN): CallsInPlace
 }
 
 @ContractsDsl
@@ -37,4 +37,5 @@ public enum class InvocationKind {
 @ExperimentalContracts
 @InlineOnly
 @SinceKotlin("1.3")
+@Suppress("UNUSED_PARAMETER")
 public inline fun contract(builder: ContractBuilder.() -> Unit) { }
