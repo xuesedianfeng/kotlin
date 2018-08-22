@@ -63,10 +63,7 @@ internal abstract class BaseContinuationImpl(
         throw UnsupportedOperationException("create(Any?;Continuation) has not been overridden")
     }
 
-    public override fun toString(): String {
-        // todo: how continuation shall be rendered?
-        return "Continuation @ ${this::class.java.name}"
-    }
+    public override fun toString(): String = "Continuation at ${getStackTraceElement() ?: this::class.java.name}"
 }
 
 @SinceKotlin("1.3")
