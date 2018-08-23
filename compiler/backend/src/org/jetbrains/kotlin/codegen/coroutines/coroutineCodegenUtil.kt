@@ -60,13 +60,13 @@ private val RELEASE_COROUTINES_VERSION_SETTINGS = LanguageVersionSettingsImpl(La
 
 fun LanguageVersionSettings.isResumeImplMethodName(name: String) =
     if (isReleaseCoroutines())
-        name == INVOKE_SUSPEND_METHOD_NAME
+        name.startsWith(INVOKE_SUSPEND_METHOD_NAME)
     else
         name == DO_RESUME_METHOD_NAME
 
 fun LanguageVersionSettings.dataFieldName(): String = if (isReleaseCoroutines()) "result" else "data"
 
-fun isResumeImplMethodNameFromAnyLanguageSettings(name: String) = name == INVOKE_SUSPEND_METHOD_NAME || name == DO_RESUME_METHOD_NAME
+fun isResumeImplMethodNameFromAnyLanguageSettings(name: String) = name.startsWith(INVOKE_SUSPEND_METHOD_NAME) || name == DO_RESUME_METHOD_NAME
 
 fun LanguageVersionSettings.coroutinesJvmInternalPackageFqName() =
     coroutinesPackageFqName().child(Name.identifier("jvm")).child(Name.identifier("internal"))
@@ -479,17 +479,6 @@ fun InstructionAdapter.invokeDoResumeWithUnit(thisName: String) {
         thisName,
         DO_RESUME_METHOD_NAME,
         Type.getMethodDescriptor(AsmTypes.OBJECT_TYPE, AsmTypes.OBJECT_TYPE, AsmTypes.JAVA_THROWABLE_TYPE),
-        false
-    )
-}
-
-fun InstructionAdapter.invokeInvokeSuspendWithUnit(thisName: String) {
-    StackValue.putUnitInstance(this)
-
-    invokevirtual(
-        thisName,
-        INVOKE_SUSPEND_METHOD_NAME,
-        Type.getMethodDescriptor(AsmTypes.OBJECT_TYPE, AsmTypes.OBJECT_TYPE),
         false
     )
 }

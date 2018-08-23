@@ -225,7 +225,7 @@ fun isInSuspendMethod(location: Location): Boolean {
     for (continuationAsmType in continuationAsmTypes()) {
         if (signature.contains(continuationAsmType.toString()) ||
             (method.name() == DO_RESUME_METHOD_NAME && signature == DO_RESUME_SIGNATURE) ||
-            (method.name() == INVOKE_SUSPEND_METHOD_NAME && signature == INVOKE_SUSPEND_SIGNATURE)
+            (method.name().startsWith(INVOKE_SUSPEND_METHOD_NAME) && signature == INVOKE_SUSPEND_SIGNATURE)
         ) return true
     }
     return false

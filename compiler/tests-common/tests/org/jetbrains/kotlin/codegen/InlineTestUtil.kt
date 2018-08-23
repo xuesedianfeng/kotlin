@@ -135,7 +135,7 @@ object InlineTestUtil {
                         return null
                     }
 
-                    if (name == INVOKE_SUSPEND_METHOD_NAME && desc == "(Ljava/lang/Object;)Ljava/lang/Object;") {
+                    if (name.startsWith(INVOKE_SUSPEND_METHOD_NAME) && desc == "(Ljava/lang/Object;)Ljava/lang/Object;") {
                         return null
                     }
 

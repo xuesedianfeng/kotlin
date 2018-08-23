@@ -73,6 +73,8 @@ abstract class AbstractCoroutineCodegen(
                 "throwable" to classDescriptor.builtIns.throwable.defaultType.makeNullable()
             )
 
+    protected val invokeSuspendMangledName = state.typeMapper.mapFunctionName(methodToImplement, OwnerKind.IMPLEMENTATION)
+
     private fun createImplMethod(name: String, vararg parameters: Pair<String, KotlinType>) =
         SimpleFunctionDescriptorImpl.create(
             classDescriptor, Annotations.EMPTY, Name.identifier(name), CallableMemberDescriptor.Kind.DECLARATION,
@@ -319,7 +321,14 @@ class CoroutineCodegenForLambda private constructor(
 
         // .doResume(Unit)
         if (languageVersionSettings.isReleaseCoroutines()) {
-            invokeInvokeSuspendWithUnit(v.thisName)
+
+            StackValue.putUnitInstance(this)
+            invokevirtual(
+                v.thisName,
+                invokeSuspendMangledName,
+                Type.getMethodDescriptor(AsmTypes.OBJECT_TYPE, AsmTypes.OBJECT_TYPE),
+                false
+            )
         } else {
             invokeDoResumeWithUnit(v.thisName)
         }
