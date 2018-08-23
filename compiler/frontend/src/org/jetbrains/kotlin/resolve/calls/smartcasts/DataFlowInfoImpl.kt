@@ -93,7 +93,9 @@ internal class DataFlowInfoImpl private constructor(
                         val subjectValue = DataFlowValue(identifierInfo.subjectInfo, subjectType)
                         putNullabilityAndTypeInfo(
                             map, subjectValue, nullability,
-                            languageVersionSettings, newTypeInfoBuilder, recordUnstable = false
+                            languageVersionSettings, newTypeInfoBuilder,
+                            // We must omit recording unstable only for OI
+                            recordUnstable = languageVersionSettings.supportsFeature(LanguageFeature.NewInference)
                         )
                         if (subjectValue.isStable) {
                             newTypeInfoBuilder?.put(subjectValue, targetType)
