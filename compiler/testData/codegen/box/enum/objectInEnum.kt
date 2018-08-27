@@ -1,3 +1,5 @@
+// LANGUAGE_VERSION: 1.2
+
 enum class E {
     ENTRY,
     SUBCLASS {

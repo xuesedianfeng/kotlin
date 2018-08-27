@@ -1,4 +1,5 @@
 // IGNORE_BACKEND: JVM_IR
+// LANGUAGE_VERSION: 1.2
 // FILE: JavaClass.java
 
 import org.jetbrains.annotations.NotNull;
