@@ -69,7 +69,8 @@ class CoroutineTransformerMethodVisitor(
 
         FixStackMethodTransformer().transform(containingClassInternalName, methodNode)
         RedundantLocalsEliminationMethodTransformer(languageVersionSettings).transform(containingClassInternalName, methodNode)
-        updateMaxStack(methodNode)
+        ChangeBoxingMethodTransformer.transform(containingClassInternalName, methodNode)
+        updateMaxStackAndLocals(methodNode)
 
         val suspensionPoints = collectSuspensionPoints(methodNode)
 
@@ -101,7 +102,7 @@ class CoroutineTransformerMethodVisitor(
         }
 
         // Actual max stack might be increased during the previous phases
-        updateMaxStack(methodNode)
+        updateMaxStackAndLocals(methodNode)
 
         // Remove unreachable suspension points
         // If we don't do this, then relevant frames will not be analyzed, that is unexpected from point of view of next steps (e.g. variable spilling)
@@ -220,7 +221,7 @@ class CoroutineTransformerMethodVisitor(
             )
     }
 
-    private fun updateMaxStack(methodNode: MethodNode) {
+    private fun updateMaxStackAndLocals(methodNode: MethodNode) {
         methodNode.instructions.resetLabels()
         methodNode.accept(
             MaxStackFrameSizeAndLocalsCalculator(
@@ -228,6 +229,7 @@ class CoroutineTransformerMethodVisitor(
                 object : MethodVisitor(Opcodes.ASM5) {
                     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
                         methodNode.maxStack = maxStack
+                        methodNode.maxLocals = maxLocals
                     }
                 }
             )
