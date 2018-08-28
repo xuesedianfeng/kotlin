@@ -5,48 +5,63 @@
 
 package org.jetbrains.kotlin.jps.build
 
-import com.intellij.openapi.util.Key
 import org.jetbrains.jps.ModuleChunk
 import org.jetbrains.jps.incremental.CompileContext
 import org.jetbrains.jps.incremental.FSOperations
-import org.jetbrains.jps.incremental.ModuleBuildTarget
+import org.jetbrains.jps.incremental.GlobalContextKey
 import org.jetbrains.jps.incremental.fs.CompilationRound
-import org.jetbrains.jps.incremental.messages.CompilerMessage
 import org.jetbrains.kotlin.incremental.LookupSymbol
 import org.jetbrains.kotlin.incremental.storage.version.CacheAttributesDiff
 import org.jetbrains.kotlin.incremental.storage.version.CacheStatus
 import org.jetbrains.kotlin.incremental.storage.version.loadDiff
 import org.jetbrains.kotlin.jps.incremental.*
-import org.jetbrains.kotlin.jps.platforms.KotlinModuleBuildTarget
-import org.jetbrains.kotlin.jps.platforms.KotlinTargetBindingsLoader
+import org.jetbrains.kotlin.jps.targets.KotlinTargetsIndex
+import org.jetbrains.kotlin.jps.targets.KotlinTargetsIndexBuilder
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
-internal val kotlinCompileContextKey = Key<KotlinCompileContext>("kotlin")
-
+/**
+ *  KotlinCompileContext is shared between all threads (i.e. it is [GlobalContextKey]).
+ *
+ *  It is initialized lazily, and only before building of first chunk with kotlin code,
+ *  and will be disposed on build finish.
+ */
 internal val CompileContext.kotlin: KotlinCompileContext
-    get() = getUserData(kotlinCompileContextKey)
-        ?: error(
-            "KotlinCompilation available only at build phase " +
-                    "(between first KotlinBuilder.chunkBuildStarted and KotlinBuilder.buildFinished)"
-        )
+    get() {
+        val userData = getUserData(kotlinCompileContextKey)
+        if (userData != null) return userData
 
-class KotlinCompileContext(val jpsContext: CompileContext) {
-    init {
-        jpsContext.testingContext?.kotlinCompileContext = this
+        // here is error (KotlinCompilation available only at build phase)
+        // let's also check for concurrent initialization
+        val errorMessage = "KotlinCompileContext available only at build phase " +
+                "(between first KotlinBuilder.chunkBuildStarted and KotlinBuilder.buildFinished)"
+
+        synchronized(kotlinCompileContextKey) {
+            val newUsedData = getUserData(kotlinCompileContextKey)
+            if (newUsedData != null) {
+                error("Concurrent CompileContext.kotlin getter call and KotlinCompileContext initialization detected: $errorMessage")
+            }
+        }
+
+        error(errorMessage)
     }
 
-    lateinit var targetsBinding: Map<ModuleBuildTarget, KotlinModuleBuildTarget<*>>
+internal val kotlinCompileContextKey = GlobalContextKey<KotlinCompileContext>("kotlin")
 
+class KotlinCompileContext(val jpsContext: CompileContext) {
     val dataManager = jpsContext.projectDescriptor.dataManager
     val dataPaths = dataManager.dataPaths
     val testingLogger: TestingBuildLogger?
         get() = jpsContext.testingContext?.buildLogger
 
-    lateinit var chunks: List<KotlinChunk>
-    private lateinit var chunksBindingByRepresentativeTarget: Map<ModuleBuildTarget, KotlinChunk>
-    lateinit var lookupsCacheAttributesManager: CompositeLookupsCacheAttributesManager
-    lateinit var initialLookupsCacheStateDiff: CacheAttributesDiff<*>
+    val targetsIndex: KotlinTargetsIndex = KotlinTargetsIndexBuilder(this).build()
+
+    val targetsBinding
+        get() = targetsIndex.byJpsTarget
+
+    val lookupsCacheAttributesManager: CompositeLookupsCacheAttributesManager = makeLookupsCacheAttributesManager()
+
+    val initialLookupsCacheStateDiff: CacheAttributesDiff<*> = loadLookupsCacheStateDiff()
 
     val shouldCheckCacheVersions = System.getProperty(KotlinBuilder.SKIP_CACHE_VERSION_CHECK_PROPERTY) == null
 
@@ -61,58 +76,10 @@ class KotlinCompileContext(val jpsContext: CompileContext) {
 
     var rebuildingAllKotlin = false
 
-    fun loadTargets() {
-        val targetsBinding = KotlinTargetBindingsLoader(jpsContext)
-
-        val chunks = mutableListOf<KotlinChunk>()
-
-        // visit all kotlin build targets
-        jpsContext.projectDescriptor.buildTargetIndex.getSortedTargetChunks(jpsContext).forEach { chunk ->
-            val moduleBuildTargets = chunk.targets.mapNotNull {
-                if (it is ModuleBuildTarget) targetsBinding.ensureLoaded(it)!!
-                else null
-            }
-
-            if (moduleBuildTargets.isNotEmpty()) {
-                val kotlinChunk = KotlinChunk(this, moduleBuildTargets)
-                moduleBuildTargets.forEach {
-                    it.chunk = kotlinChunk
-                }
-
-                chunks.add(kotlinChunk)
-            }
-        }
-
-        this.targetsBinding = targetsBinding.build()
-        this.chunks = chunks.toList()
-        this.chunksBindingByRepresentativeTarget = chunks.associateBy { it.representativeTarget.jpsModuleBuildTarget }
-
-        calculateChunkDependencies()
-    }
-
-    private fun calculateChunkDependencies() {
-        chunks.forEach { chunk ->
-            val dependencies = mutableSetOf<KotlinModuleBuildTarget.Dependency>()
-
-            chunk.targets.forEach {
-                dependencies.addAll(it.calculateDependencies())
-            }
-
-            chunk.dependencies = dependencies.toList()
-            chunk.dependencies.forEach { dependency ->
-                dependency.target.chunk._dependent!!.add(dependency)
-            }
-        }
-
-        chunks.forEach {
-            it.dependent = it._dependent!!.toList()
-            it._dependent = null
-        }
-    }
-
-    fun loadLookupsCacheAttributes() {
+    private fun makeLookupsCacheAttributesManager(): CompositeLookupsCacheAttributesManager {
         val expectedLookupsCacheComponents = mutableSetOf<String>()
-        chunks.forEach { chunk ->
+
+        targetsIndex.chunks.forEach { chunk ->
             chunk.targets.forEach { target ->
                 if (target.isIncrementalCompilationEnabled) {
                     expectedLookupsCacheComponents.add(target.globalLookupCacheId)
@@ -121,10 +88,13 @@ class KotlinCompileContext(val jpsContext: CompileContext) {
         }
 
         val lookupsCacheRootPath = dataPaths.getTargetDataRoot(KotlinDataContainerTarget)
-        this.lookupsCacheAttributesManager = CompositeLookupsCacheAttributesManager(lookupsCacheRootPath, expectedLookupsCacheComponents)
-        this.initialLookupsCacheStateDiff = lookupsCacheAttributesManager.loadDiff()
+        return CompositeLookupsCacheAttributesManager(lookupsCacheRootPath, expectedLookupsCacheComponents)
+    }
 
-        if (initialLookupsCacheStateDiff.status == CacheStatus.VALID) {
+    private fun loadLookupsCacheStateDiff(): CacheAttributesDiff<CompositeLookupsCacheAttributes> {
+        val diff = lookupsCacheAttributesManager.loadDiff()
+
+        if (diff.status == CacheStatus.VALID) {
             // try to perform a lookup
             // request rebuild if storage is corrupted
             try {
@@ -132,15 +102,16 @@ class KotlinCompileContext(val jpsContext: CompileContext) {
                     it.get(LookupSymbol("<#NAME#>", "<#SCOPE#>"))
                 }
             } catch (e: Exception) {
-                jpsReportInternalBuilderError(jpsContext, e)
-
-                jpsContext.kotlin.markAllKotlinForRebuild("Lookup storage is corrupted")
-                initialLookupsCacheStateDiff = initialLookupsCacheStateDiff.copy(actual = null)
+                jpsReportInternalBuilderError(jpsContext, Error("Lookup storage is corrupted, probe failed: ${e.message}", e))
+                markAllKotlinForRebuild("Lookup storage is corrupted")
+                return diff.copy(actual = null)
             }
         }
+
+        return diff
     }
 
-    fun hasKotlin() = chunks.any { chunk ->
+    fun hasKotlin() = targetsIndex.chunks.any { chunk ->
         chunk.targets.any { target ->
             hasKotlinMarker[target] == true
         }
@@ -195,7 +166,7 @@ class KotlinCompileContext(val jpsContext: CompileContext) {
         return shouldProcess
     }
 
-    fun markAllKotlinForRebuild(reason: String) {
+    private fun markAllKotlinForRebuild(reason: String) {
         if (rebuildingAllKotlin) return
         rebuildingAllKotlin = true
 
@@ -203,7 +174,7 @@ class KotlinCompileContext(val jpsContext: CompileContext) {
 
         val dataManager = jpsContext.projectDescriptor.dataManager
 
-        chunks.forEach {
+        targetsIndex.chunks.forEach {
             markChunkForRebuildBeforeBuild(it)
         }
 
@@ -226,7 +197,7 @@ class KotlinCompileContext(val jpsContext: CompileContext) {
         clearLookupCache()
 
         KotlinBuilder.LOG.info("Clearing caches for all targets")
-        chunks.forEach { chunk ->
+        targetsIndex.chunks.forEach { chunk ->
             chunk.targets.forEach {
                 dataManager.getKotlinCache(it)?.clean()
             }
@@ -242,7 +213,7 @@ class KotlinCompileContext(val jpsContext: CompileContext) {
     fun cleanupCaches() {
         // todo: remove lookups for targets with disabled IC (or split global lookups cache into several caches for each compiler)
 
-        chunks.forEach { chunk ->
+        targetsIndex.chunks.forEach { chunk ->
             chunk.targets.forEach { target ->
                 if (target.initialLocalCacheAttributesDiff.status == CacheStatus.SHOULD_BE_CLEARED) {
                     KotlinBuilder.LOG.info(
@@ -261,9 +232,9 @@ class KotlinCompileContext(val jpsContext: CompileContext) {
 
     fun getChunk(rawChunk: ModuleChunk): KotlinChunk? {
         val rawRepresentativeTarget = rawChunk.representativeTarget()
-        if (targetsBinding[rawRepresentativeTarget] == null) return null
+        if (rawRepresentativeTarget !in targetsBinding) return null
 
-        return chunksBindingByRepresentativeTarget[rawRepresentativeTarget]
+        return targetsIndex.chunksByJpsRepresentativeTarget[rawRepresentativeTarget]
             ?: error("Kotlin binding for chunk $this is not loaded at build start")
     }
 }

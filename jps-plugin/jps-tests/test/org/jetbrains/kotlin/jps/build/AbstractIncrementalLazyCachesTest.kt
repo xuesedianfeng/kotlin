@@ -25,7 +25,7 @@ import org.jetbrains.kotlin.incremental.storage.BasicMapsOwner
 import org.jetbrains.kotlin.incremental.testingUtils.Modification
 import org.jetbrains.kotlin.incremental.testingUtils.ModifyContent
 import org.jetbrains.kotlin.jps.incremental.KotlinDataContainerTarget
-import org.jetbrains.kotlin.jps.platforms.KotlinModuleBuildTarget
+import org.jetbrains.kotlin.jps.targets.KotlinModuleBuildTarget
 import org.jetbrains.kotlin.utils.Printer
 import java.io.File
 

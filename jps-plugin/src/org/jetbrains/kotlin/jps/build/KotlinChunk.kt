@@ -12,7 +12,7 @@ import org.jetbrains.kotlin.incremental.storage.version.CacheStatus
 import org.jetbrains.kotlin.jps.incremental.JpsIncrementalCache
 import org.jetbrains.kotlin.jps.incremental.getKotlinCache
 import org.jetbrains.kotlin.jps.model.kotlinCompilerArguments
-import org.jetbrains.kotlin.jps.platforms.KotlinModuleBuildTarget
+import org.jetbrains.kotlin.jps.targets.KotlinModuleBuildTarget
 import org.jetbrains.kotlin.utils.keysToMapExceptNulls
 import java.io.File
 
@@ -23,8 +23,12 @@ class KotlinChunk internal constructor(val context: KotlinCompileContext, val ta
     val containsTests = targets.any { it.isTests }
 
     lateinit var dependencies: List<KotlinModuleBuildTarget.Dependency>
+        // Should be initialized only in KotlinChunk.calculateChunkDependencies
+        internal set
 
     lateinit var dependent: List<KotlinModuleBuildTarget.Dependency>
+        // Should be initialized only in KotlinChunk.calculateChunkDependencies
+        internal set
 
     // used only during dependency calculation
     internal var _dependent: MutableSet<KotlinModuleBuildTarget.Dependency>? = mutableSetOf()
@@ -52,28 +56,17 @@ class KotlinChunk internal constructor(val context: KotlinCompileContext, val ta
         )
 
     fun shouldRebuild(): Boolean {
-        if (isVersionChanged()) {
-            // info message about version change reported in `isVersionChanged()`
-            return true
-        }
-
-        targets.forEach {
-            if (it.initialLocalCacheAttributesDiff.status == CacheStatus.INVALID) {
-                context.testingLogger?.invalidOrUnusedCache(this, null, it.initialLocalCacheAttributesDiff)
-                KotlinBuilder.LOG.info("$it cache is invalid ${it.initialLocalCacheAttributesDiff}, rebuilding $this")
-                return true
-            }
-        }
-
-        return false
-    }
-
-    private fun isVersionChanged(): Boolean {
         val buildMetaInfo = representativeTarget.buildMetaInfoFactory.create(compilerArguments)
 
-        for (target in targets) {
+        targets.forEach { target ->
             if (target.isVersionChanged(this, buildMetaInfo)) {
                 KotlinBuilder.LOG.info("$target version changed, rebuilding $this")
+                return true
+            }
+
+            if (target.initialLocalCacheAttributesDiff.status == CacheStatus.INVALID) {
+                context.testingLogger?.invalidOrUnusedCache(this, null, target.initialLocalCacheAttributesDiff)
+                KotlinBuilder.LOG.info("$target cache is invalid ${target.initialLocalCacheAttributesDiff}, rebuilding $this")
                 return true
             }
         }

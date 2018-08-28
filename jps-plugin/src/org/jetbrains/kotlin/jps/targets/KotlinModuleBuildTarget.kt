@@ -3,7 +3,7 @@
  * that can be found in the license/LICENSE.txt file.
  */
 
-package org.jetbrains.kotlin.jps.platforms
+package org.jetbrains.kotlin.jps.targets
 
 import org.jetbrains.jps.ModuleChunk
 import org.jetbrains.jps.builders.storage.BuildDataPaths
@@ -44,12 +44,12 @@ import java.io.File
  * Properties and actions for Kotlin test / production module build target.
  */
 abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo> internal constructor(
-    val jpsContext: CompileContext,
+    val kotlinContext: KotlinCompileContext,
     val jpsModuleBuildTarget: ModuleBuildTarget
 ) {
     // TODO(1.2.80): got rid of jpsContext and replace it with kotlinContext
-    val kotlinContext: KotlinCompileContext
-        get() = jpsContext.kotlin
+    val jpsContext: CompileContext
+        get() = kotlinContext.jpsContext
 
     // Initialized in KotlinCompileContext.loadTargets
     lateinit var chunk: KotlinChunk
@@ -99,8 +99,8 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo> intern
             val result = mutableListOf<KotlinModuleBuildTarget<*>>()
 
             if (isTests) {
-                result.addIfNotNull(jpsContext.kotlinBuildTargets[module.productionBuildTarget])
-                result.addIfNotNull(jpsContext.kotlinBuildTargets[relatedProductionModule?.productionBuildTarget])
+                result.addIfNotNull(kotlinContext.targetsBinding[module.productionBuildTarget])
+                result.addIfNotNull(kotlinContext.targetsBinding[relatedProductionModule?.productionBuildTarget])
             }
 
             return result.filter { it.sources.isNotEmpty() }
@@ -120,50 +120,8 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo> intern
         val exported: Boolean
     )
 
-    internal fun calculateDependencies(): List<Dependency> {
-        val dependencies = mutableListOf<Dependency>()
-        val classpathKind = JpsJavaClasspathKind.compile(isTests)
-
-        // TODO(1.2.80): Ask for JPS API
-        // Unfortunately JPS has not API for accessing "exported" flag while enumerating module dependencies,
-        // but has API for getting all and exported only dependent modules.
-        // So, lets first get set of all dependent targets, then remove exported only.
-        val dependentTargets = mutableSetOf<KotlinModuleBuildTarget<*>>()
-
-        JpsJavaExtensionService.dependencies(module)
-            .includedIn(classpathKind)
-            .processModules { module ->
-                val kotlinTarget = kotlinContext.targetsBinding[ModuleBuildTarget(module, isTests)]
-                if (kotlinTarget != null) {
-                    dependentTargets.add(kotlinTarget)
-                }
-            }
-
-        JpsJavaExtensionService.dependencies(module)
-            .includedIn(classpathKind)
-            .exportedOnly()
-            .processModules { module ->
-                val kotlinTarget = kotlinContext.targetsBinding[ModuleBuildTarget(module, isTests)]
-                if (kotlinTarget != null) {
-                    dependentTargets.remove(kotlinTarget)
-                    dependencies.add(Dependency(this, kotlinTarget, true))
-                }
-            }
-
-        dependentTargets.forEach { target ->
-            dependencies.add(Dependency(this, target, false))
-        }
-
-        if (isTests) {
-            val productionTarget = kotlinContext.targetsBinding[ModuleBuildTarget(module, false)]
-            if (productionTarget != null) {
-                dependencies.add(Dependency(this, productionTarget, true))
-            }
-        }
-
-        return dependencies
-    }
-
+    // TODO(1.2.80): try replace allDependencies with KotlinChunk.collectDependentChunksRecursivelyExportedOnly
+    @Deprecated("Consider using precalculated KotlinChunk.collectDependentChunksRecursivelyExportedOnly")
     val allDependencies by lazy {
         JpsJavaExtensionService.dependencies(module).recursively().exportedOnly()
             .includedIn(JpsJavaClasspathKind.compile(isTests))

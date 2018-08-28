@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.jps.incremental
 
+import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.incremental.storage.version.CacheAttributesManager
 import org.jetbrains.kotlin.incremental.storage.version.CacheVersion
 import org.jetbrains.kotlin.incremental.storage.version.lookupsCacheVersionManager
@@ -21,12 +22,14 @@ class CompositeLookupsCacheAttributesManager(
     rootPath: File,
     expectedComponents: Set<String>
 ) : CacheAttributesManager<CompositeLookupsCacheAttributes> {
-    /* open for test only */ val versionManager = lookupsCacheVersionManager(
+    @get:TestOnly
+    val versionManager = lookupsCacheVersionManager(
         rootPath,
         expectedComponents.isNotEmpty()
     )
 
-    /* open for test only */ val actualComponentsFile = File(rootPath, "components.txt")
+    @get:TestOnly
+    val actualComponentsFile = File(rootPath, "components.txt")
 
     override val expected: CompositeLookupsCacheAttributes? =
         if (expectedComponents.isEmpty()) null

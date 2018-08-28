@@ -17,7 +17,7 @@
 package org.jetbrains.kotlin.jps.build
 
 import org.jetbrains.kotlin.incremental.testingUtils.BuildLogFinder
-import org.jetbrains.kotlin.jps.platforms.KotlinModuleBuildTarget
+import org.jetbrains.kotlin.jps.targets.KotlinModuleBuildTarget
 
 abstract class AbstractDataContainerVersionChangedTest : AbstractIncrementalCacheVersionChangedTest() {
     override val buildLogFinder: BuildLogFinder

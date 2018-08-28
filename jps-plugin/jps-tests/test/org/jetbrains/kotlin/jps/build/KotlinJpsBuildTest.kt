@@ -64,7 +64,7 @@ import org.jetbrains.kotlin.incremental.withIC
 import org.jetbrains.kotlin.jps.build.KotlinJpsBuildTest.LibraryDependency.*
 import org.jetbrains.kotlin.jps.model.kotlinCommonCompilerArguments
 import org.jetbrains.kotlin.jps.model.kotlinCompilerArguments
-import org.jetbrains.kotlin.jps.platforms.KotlinModuleBuildTarget
+import org.jetbrains.kotlin.jps.targets.KotlinModuleBuildTarget
 import org.jetbrains.kotlin.load.kotlin.PackagePartClassUtils
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.test.KotlinTestUtils

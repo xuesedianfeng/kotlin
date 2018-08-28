@@ -3,7 +3,7 @@
  * that can be found in the license/LICENSE.txt file.
  */
 
-package org.jetbrains.kotlin.jps.platforms
+package org.jetbrains.kotlin.jps.targets
 
 import org.jetbrains.jps.ModuleChunk
 import org.jetbrains.jps.builders.storage.BuildDataPaths
@@ -17,6 +17,7 @@ import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.K2MetadataCompilerArguments
 import org.jetbrains.kotlin.compilerRunner.JpsCompilerEnvironment
 import org.jetbrains.kotlin.compilerRunner.JpsKotlinCompilerRunner
+import org.jetbrains.kotlin.jps.build.KotlinCompileContext
 import org.jetbrains.kotlin.jps.build.KotlinDirtySourceFilesHolder
 import org.jetbrains.kotlin.jps.build.ModuleBuildTarget
 import org.jetbrains.kotlin.jps.model.k2MetadataCompilerArguments
@@ -24,8 +25,8 @@ import org.jetbrains.kotlin.jps.model.kotlinCompilerSettings
 
 private const val COMMON_BUILD_META_INFO_FILE_NAME = "common-build-meta-info.txt"
 
-class KotlinCommonModuleBuildTarget(context: CompileContext, jpsModuleBuildTarget: ModuleBuildTarget) :
-    KotlinModuleBuildTarget<CommonBuildMetaInfo>(context, jpsModuleBuildTarget) {
+class KotlinCommonModuleBuildTarget(kotlinContext: KotlinCompileContext, jpsModuleBuildTarget: ModuleBuildTarget) :
+    KotlinModuleBuildTarget<CommonBuildMetaInfo>(kotlinContext, jpsModuleBuildTarget) {
 
     override val isIncrementalCompilationEnabled: Boolean
         get() = false

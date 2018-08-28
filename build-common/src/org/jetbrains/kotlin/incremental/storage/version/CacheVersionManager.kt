@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.incremental.storage.version
 
+import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.metadata.jvm.deserialization.JvmBytecodeBinaryVersion
 import org.jetbrains.kotlin.metadata.jvm.deserialization.JvmMetadataVersion
 import java.io.File
@@ -17,8 +18,9 @@ import java.io.IOException
  * Based on that status system may perform required actions (i.e. rebuild something, clearing caches, etc...).
  */
 class CacheVersionManager(
-    /* open for test only */ val versionFile: File,
-                             expectedOwnVersion: Int?
+    @get:TestOnly
+    val versionFile: File,
+    expectedOwnVersion: Int?
 ) : CacheAttributesManager<CacheVersion> {
     override val expected: CacheVersion? =
         if (expectedOwnVersion == null) null

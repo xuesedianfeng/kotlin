@@ -12,7 +12,7 @@ package org.jetbrains.kotlin.incremental.storage.version
  *
  * [CacheAttributesDiff] can be used to cache current attribute values and as facade for version operations.
  */
-data class CacheAttributesDiff<Attrs>(
+data class CacheAttributesDiff<Attrs: Any>(
     val manager: CacheAttributesManager<Attrs>,
     val actual: Attrs?,
     val expected: Attrs?

@@ -3,7 +3,7 @@
  * that can be found in the license/LICENSE.txt file.
  */
 
-package org.jetbrains.kotlin.jps.platforms
+package org.jetbrains.kotlin.jps.targets
 
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.text.StringUtil
@@ -32,6 +32,7 @@ import org.jetbrains.kotlin.incremental.*
 import org.jetbrains.kotlin.incremental.components.ExpectActualTracker
 import org.jetbrains.kotlin.incremental.components.LookupTracker
 import org.jetbrains.kotlin.jps.build.KotlinBuilder
+import org.jetbrains.kotlin.jps.build.KotlinCompileContext
 import org.jetbrains.kotlin.jps.build.KotlinDirtySourceFilesHolder
 import org.jetbrains.kotlin.jps.incremental.JpsIncrementalCache
 import org.jetbrains.kotlin.jps.incremental.JpsIncrementalJvmCache
@@ -48,8 +49,8 @@ import java.io.IOException
 
 private const val JVM_BUILD_META_INFO_FILE_NAME = "jvm-build-meta-info.txt"
 
-class KotlinJvmModuleBuildTarget(compileContext: CompileContext, jpsModuleBuildTarget: ModuleBuildTarget) :
-    KotlinModuleBuildTarget<JvmBuildMetaInfo>(compileContext, jpsModuleBuildTarget) {
+class KotlinJvmModuleBuildTarget(kotlinContext: KotlinCompileContext, jpsModuleBuildTarget: ModuleBuildTarget) :
+    KotlinModuleBuildTarget<JvmBuildMetaInfo>(kotlinContext, jpsModuleBuildTarget) {
 
     override val isIncrementalCompilationEnabled: Boolean
         get() = IncrementalCompilation.isEnabledForJvm()

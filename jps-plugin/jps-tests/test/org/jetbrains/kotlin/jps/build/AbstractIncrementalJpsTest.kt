@@ -52,7 +52,7 @@ import org.jetbrains.kotlin.incremental.testingUtils.*
 import org.jetbrains.kotlin.jps.incremental.CompositeLookupsCacheAttributesManager
 import org.jetbrains.kotlin.jps.incremental.getKotlinCache
 import org.jetbrains.kotlin.jps.incremental.withLookupStorage
-import org.jetbrains.kotlin.jps.platforms.KotlinModuleBuildTarget
+import org.jetbrains.kotlin.jps.targets.KotlinModuleBuildTarget
 import org.jetbrains.kotlin.test.KotlinTestUtils
 import org.jetbrains.kotlin.utils.Printer
 import org.jetbrains.kotlin.utils.keysToMap

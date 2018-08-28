@@ -45,8 +45,8 @@ import org.jetbrains.kotlin.incremental.components.LookupTracker
 import org.jetbrains.kotlin.jps.incremental.JpsIncrementalCache
 import org.jetbrains.kotlin.jps.incremental.withLookupStorage
 import org.jetbrains.kotlin.jps.model.kotlinKind
-import org.jetbrains.kotlin.jps.platforms.KotlinJvmModuleBuildTarget
-import org.jetbrains.kotlin.jps.platforms.KotlinModuleBuildTarget
+import org.jetbrains.kotlin.jps.targets.KotlinJvmModuleBuildTarget
+import org.jetbrains.kotlin.jps.targets.KotlinModuleBuildTarget
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.preloading.ClassCondition
 import org.jetbrains.kotlin.utils.KotlinPaths
@@ -84,30 +84,54 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
 
     override fun getCompilableFileExtensions() = arrayListOf("kt", "kts")
 
-    @Volatile
-    private var kotlinContextInitialized = false
-
     /**
-     * Initialize Kotlin Context only before first chunk build.
+     * Ensure Kotlin Context initialized.
+     * Kotlin Context should be initialized only when required (before first kotlin chunk build).
      */
-    private fun ensureKotlinContextInitialized(context: CompileContext) {
-        if (!kotlinContextInitialized) {
-            synchronized(this) {
-                if (!kotlinContextInitialized) {
-                    initializeKotlinContext(context)
-                    kotlinContextInitialized = true
-                }
+    private fun ensureKotlinContextInitialized(context: CompileContext): KotlinCompileContext {
+        val kotlinCompileContext = context.getUserData(kotlinCompileContextKey)
+        if (kotlinCompileContext != null) return kotlinCompileContext
+
+        // don't synchronize on context, since it chunk local only
+        synchronized(kotlinCompileContextKey) {
+            val actualKotlinCompileContext = context.getUserData(kotlinCompileContextKey)
+            if (actualKotlinCompileContext != null) return actualKotlinCompileContext
+
+            try {
+                val newKotlinCompileContext = initializeKotlinContext(context)
+                context.putUserData(kotlinCompileContextKey, newKotlinCompileContext)
+                return newKotlinCompileContext
+            } catch (t: Throwable) {
+                jpsReportInternalBuilderError(context, Error("Cannot initialize Kotlin context: ${t.message}", t))
+                throw t
             }
         }
     }
 
-    private fun initializeKotlinContext(context: CompileContext) {
+    private fun initializeKotlinContext(context: CompileContext): KotlinCompileContext {
+        logSettings(context)
+
+        val kotlinContext = KotlinCompileContext(context)
+
+        context.putUserData(kotlinCompileContextKey, kotlinContext)
+        context.testingContext?.kotlinCompileContext = kotlinContext
+
+        if (kotlinContext.shouldCheckCacheVersions && kotlinContext.hasKotlin()) {
+            kotlinContext.checkCacheVersions()
+        }
+
+        kotlinContext.cleanupCaches()
+
+        return kotlinContext
+    }
+
+    private fun logSettings(context: CompileContext) {
         LOG.debug("==========================================")
         LOG.info("is Kotlin incremental compilation enabled for JVM: ${IncrementalCompilation.isEnabledForJvm()}")
         LOG.info("is Kotlin incremental compilation enabled for JS: ${IncrementalCompilation.isEnabledForJs()}")
         if (IncrementalCompilation.isEnabledForJs()) {
             val messageCollector = MessageCollectorAdapter(context, null)
-            messageCollector.report(CompilerMessageSeverity.INFO, "Using experimental incremental compilation for Kotlin/JS")
+            messageCollector.report(INFO, "Using experimental incremental compilation for Kotlin/JS")
         }
 
         LOG.info("is Kotlin compiler daemon enabled: ${isDaemonEnabled()}")
@@ -116,28 +140,24 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
         if (historyLabel != null) {
             LOG.info("Label in local history: $historyLabel")
         }
-
-        val kotlinContext = KotlinCompileContext(context)
-        context.putUserData(kotlinCompileContextKey, kotlinContext)
-
-        kotlinContext.loadTargets()
-        kotlinContext.loadLookupsCacheAttributes()
-
-        if (kotlinContext.shouldCheckCacheVersions && kotlinContext.hasKotlin()) {
-            kotlinContext.checkCacheVersions()
-        }
-
-        kotlinContext.cleanupCaches()
     }
 
     override fun buildFinished(context: CompileContext) {
-        if (kotlinContextInitialized) {
-            kotlinContextInitialized = false // unfortunately JPS sometimes calling buildFinished twice
+        ensureKotlinContextDisposed(context)
+    }
 
-            context.kotlin.dispose()
-            context.putUserData(kotlinCompileContextKey, null)
+    private fun ensureKotlinContextDisposed(context: CompileContext) {
+        if (context.getUserData(kotlinCompileContextKey) != null) {
+            // don't synchronize on context, since it chunk local only
+            synchronized(kotlinCompileContextKey) {
+                val kotlinCompileContext = context.getUserData(kotlinCompileContextKey)
+                if (kotlinCompileContext != null) {
+                    kotlinCompileContext.dispose()
+                    context.putUserData(kotlinCompileContextKey, null)
 
-            statisticsLogger.reportTotal()
+                    statisticsLogger.reportTotal()
+                }
+            }
         }
     }
 
@@ -146,14 +166,13 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
 
         if (chunk.isDummy(context)) return
 
-        ensureKotlinContextInitialized(context)
+        val kotlinContext = ensureKotlinContextInitialized(context)
 
         val buildLogger = context.testingContext?.buildLogger
         buildLogger?.chunkBuildStarted(context, chunk)
 
         if (JavaBuilderUtil.isForcedRecompilationAllJavaModules(context)) return
 
-        val kotlinContext = context.kotlin
         val targets = chunk.targets
         if (targets.none { kotlinContext.hasKotlinMarker[it] == true }) return
 
@@ -161,7 +180,7 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
         kotlinContext.checkChunkCacheVersion(kotlinChunk)
 
         if (!kotlinContext.rebuildingAllKotlin) {
-            markAdditionalFilesForInitialRound(kotlinChunk, chunk, context)
+            markAdditionalFilesForInitialRound(kotlinChunk, chunk, kotlinContext)
         }
 
         buildLogger?.afterChunkBuildStarted(context, chunk)
@@ -172,12 +191,14 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
      * See KT-13677 for more details.
      *
      * todo(1.2.80): move to KotlinChunk
+     * todo(1.2.80): got rid of jpsContext usages (replace with KotlinCompileContext)
      */
     private fun markAdditionalFilesForInitialRound(
         kotlinChunk: KotlinChunk,
         chunk: ModuleChunk,
-        context: CompileContext
+        kotlinContext: KotlinCompileContext
     ) {
+        val context = kotlinContext.jpsContext
         val dirtyFilesHolder = KotlinDirtySourceFilesHolder(
             chunk,
             context,
@@ -189,7 +210,7 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
         )
         val fsOperations = FSOperationsHelper(context, chunk, dirtyFilesHolder, LOG)
 
-        val representativeTarget = context.kotlinBuildTargets[chunk.representativeTarget()] ?: return
+        val representativeTarget = kotlinContext.targetsBinding[chunk.representativeTarget()] ?: return
 
         // dependent caches are not required, since we are not going to update caches
         val incrementalCaches = kotlinChunk.loadCaches(loadDependent = false)
@@ -421,7 +442,7 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
             val changesCollector = ChangesCollector()
 
             for ((target, files) in generatedFiles) {
-                val kotlinModuleBuilderTarget = context.kotlinBuildTargets[target]!!
+                val kotlinModuleBuilderTarget = kotlinContext.targetsBinding[target]!!
                 kotlinModuleBuilderTarget.updateCaches(incrementalCaches[kotlinModuleBuilderTarget]!!, files, changesCollector, environment)
             }
 

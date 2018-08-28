@@ -3,7 +3,7 @@
  * that can be found in the license/LICENSE.txt file.
  */
 
-package org.jetbrains.kotlin.jps.platforms
+package org.jetbrains.kotlin.jps.targets
 
 import org.jetbrains.jps.ModuleChunk
 import org.jetbrains.jps.builders.storage.BuildDataPaths
@@ -27,6 +27,7 @@ import org.jetbrains.kotlin.incremental.js.IncrementalDataProvider
 import org.jetbrains.kotlin.incremental.js.IncrementalDataProviderFromCache
 import org.jetbrains.kotlin.incremental.js.IncrementalResultsConsumer
 import org.jetbrains.kotlin.incremental.js.IncrementalResultsConsumerImpl
+import org.jetbrains.kotlin.jps.build.KotlinCompileContext
 import org.jetbrains.kotlin.jps.build.KotlinDirtySourceFilesHolder
 import org.jetbrains.kotlin.jps.build.ModuleBuildTarget
 import org.jetbrains.kotlin.jps.incremental.JpsIncrementalCache
@@ -43,8 +44,8 @@ import java.net.URI
 
 private const val JS_BUILD_META_INFO_FILE_NAME = "js-build-meta-info.txt"
 
-class KotlinJsModuleBuildTarget(compileContext: CompileContext, jpsModuleBuildTarget: ModuleBuildTarget) :
-    KotlinModuleBuildTarget<JsBuildMetaInfo>(compileContext, jpsModuleBuildTarget) {
+class KotlinJsModuleBuildTarget(kotlinContext: KotlinCompileContext, jpsModuleBuildTarget: ModuleBuildTarget) :
+    KotlinModuleBuildTarget<JsBuildMetaInfo>(kotlinContext, jpsModuleBuildTarget) {
     override val globalLookupCacheId: String
         get() = "js"
 

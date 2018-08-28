@@ -9,9 +9,6 @@ import org.jetbrains.jps.incremental.CompileContext
 import org.jetbrains.jps.incremental.messages.CompilerMessage
 
 fun jpsReportInternalBuilderError(context: CompileContext, error: Throwable) {
-    val builderError = CompilerMessage.createInternalBuilderError(
-        "Kotlin",
-        Exception("Lookups probe failed: ${error.message}", error)
-    )
+    val builderError = CompilerMessage.createInternalBuilderError("Kotlin", error)
     context.processMessage(builderError)
 }

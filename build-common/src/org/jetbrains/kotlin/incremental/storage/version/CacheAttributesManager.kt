@@ -14,7 +14,7 @@ package org.jetbrains.kotlin.incremental.storage.version
  *
  * [CacheAttributesDiff] can be used to cache current attribute values and then can be used as facade for cache version operations.
  */
-interface CacheAttributesManager<Attrs> {
+interface CacheAttributesManager<Attrs : Any> {
     /**
      * Cache attribute values expected by the current version of build system and compiler.
      * `null` means that cache is not required (incremental compilation is disabled).
@@ -44,12 +44,12 @@ interface CacheAttributesManager<Attrs> {
     fun isCompatible(actual: Attrs, expected: Attrs): Boolean = actual == expected
 }
 
-fun <Attrs> CacheAttributesManager<Attrs>.loadDiff(
+fun <Attrs : Any> CacheAttributesManager<Attrs>.loadDiff(
     actual: Attrs? = this.loadActual(),
     expected: Attrs? = this.expected
 ) = CacheAttributesDiff(this, actual, expected)
 
-fun <Attrs> CacheAttributesManager<Attrs>.loadAndCheckStatus() =
+fun <Attrs : Any> CacheAttributesManager<Attrs>.loadAndCheckStatus() =
     loadDiff().status
 
 /**
@@ -60,7 +60,7 @@ fun <Attrs> CacheAttributesManager<Attrs>.loadAndCheckStatus() =
     message = "Consider using `this.loadDiff().saveExpectedIfNeeded()` and cache `loadDiff()` result.",
     replaceWith = ReplaceWith("loadDiff().saveExpectedIfNeeded()")
 )
-fun <Attrs> CacheAttributesManager<Attrs>.saveIfNeeded(
+fun <Attrs : Any> CacheAttributesManager<Attrs>.saveIfNeeded(
     actual: Attrs? = this.loadActual(),
     expected: Attrs = this.expected
         ?: error("To save disabled cache status [delete] should be called (this behavior is kept for compatibility)")

@@ -10,11 +10,11 @@ import java.io.File
 private val DATA_CONTAINER_VERSION_FILE_NAME = "data-container-format-version.txt"
 private val DATA_CONTAINER_VERSION = 3
 
-fun lookupsCacheVersionManager(dataRoot: File, isCachesEnabled: Boolean) =
+fun lookupsCacheVersionManager(dataRoot: File, isEnabled: Boolean) =
     CacheVersionManager(
         File(dataRoot, DATA_CONTAINER_VERSION_FILE_NAME),
-        if (isCachesEnabled) DATA_CONTAINER_VERSION else null
+        if (isEnabled) DATA_CONTAINER_VERSION else null
     )
 
-fun readLookupsCacheStatus(dataRoot: File, isCachesEnabled: Boolean): CacheStatus =
-    lookupsCacheVersionManager(dataRoot, isCachesEnabled).loadAndCheckStatus()
+fun readLookupsCacheStatus(dataRoot: File, isEnabled: Boolean): CacheStatus =
+    lookupsCacheVersionManager(dataRoot, isEnabled).loadAndCheckStatus()
