@@ -66,7 +66,6 @@ fun <Attrs : Any> CacheAttributesManager<Attrs>.saveIfNeeded(
         ?: error("To save disabled cache status [delete] should be called (this behavior is kept for compatibility)")
 ) = loadDiff(actual, expected).saveExpectedIfNeeded()
 
-
 /**
  * This method is kept only for compatibility.
  * Delete actual cache attributes values if it existed.

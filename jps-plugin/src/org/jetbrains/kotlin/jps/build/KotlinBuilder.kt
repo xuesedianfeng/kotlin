@@ -92,7 +92,7 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
         val kotlinCompileContext = context.getUserData(kotlinCompileContextKey)
         if (kotlinCompileContext != null) return kotlinCompileContext
 
-        // don't synchronize on context, since it chunk local only
+        // don't synchronize on context, since it is chunk local only
         synchronized(kotlinCompileContextKey) {
             val actualKotlinCompileContext = context.getUserData(kotlinCompileContextKey)
             if (actualKotlinCompileContext != null) return actualKotlinCompileContext
@@ -191,7 +191,7 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
      * See KT-13677 for more details.
      *
      * todo(1.2.80): move to KotlinChunk
-     * todo(1.2.80): got rid of jpsContext usages (replace with KotlinCompileContext)
+     * todo(1.2.80): got rid of jpsGlobalContext usages (replace with KotlinCompileContext)
      */
     private fun markAdditionalFilesForInitialRound(
         kotlinChunk: KotlinChunk,
@@ -217,6 +217,7 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
 
         val messageCollector = MessageCollectorAdapter(context, representativeTarget)
         val environment = createCompileEnvironment(
+            kotlinContext.jpsContext,
             representativeTarget,
             incrementalCaches,
             LookupTracker.DO_NOTHING,
@@ -274,7 +275,7 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
             if (chunk.modules.size > 1) {
                 messageCollector.report(
                     CompilerMessageSeverity.ERROR,
-                    "Cyclically dependent modules is not supported in multiplatform projects"
+                    "Cyclically dependent modules are not supported in multiplatform projects"
                 )
                 return ABORT
             }
@@ -361,6 +362,7 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
         val exceptActualTracer = ExpectActualTrackerImpl()
         val incrementalCaches = kotlinChunk.loadCaches()
         val environment = createCompileEnvironment(
+            context,
             representativeTarget,
             incrementalCaches,
             lookupTracker,
@@ -424,6 +426,7 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
         }
 
         representativeTarget.updateChunkMappings(
+            context,
             chunk,
             kotlinDirtyFilesHolder,
             generatedFiles,
@@ -474,23 +477,10 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
         environment: JpsCompilerEnvironment,
         incrementalCaches: Map<KotlinModuleBuildTarget<*>, JpsIncrementalCache>
     ): OutputItemsCollector? {
+        loadPlugins(representativeTarget, commonArguments, context)
 
-        fun concatenate(strings: Array<String>?, cp: List<String>) = arrayOf(*strings.orEmpty(), *cp.toTypedArray())
-
-        for (argumentProvider in ServiceLoader.load(KotlinJpsCompilerArgumentsProvider::class.java)) {
-            val jpsModuleBuildTarget = representativeTarget.jpsModuleBuildTarget
-            // appending to pluginOptions
-            commonArguments.pluginOptions = concatenate(
-                commonArguments.pluginOptions,
-                argumentProvider.getExtraArguments(jpsModuleBuildTarget, context)
-            )
-            // appending to classpath
-            commonArguments.pluginClasspaths = concatenate(
-                commonArguments.pluginClasspaths,
-                argumentProvider.getClasspath(jpsModuleBuildTarget, context)
-            )
-
-            LOG.debug("Plugin loaded: ${argumentProvider::class.java.simpleName}")
+        kotlinChunk.targets.forEach {
+            it.nextRound(context)
         }
 
         if (representativeTarget.isIncrementalCompilationEnabled) {
@@ -516,7 +506,32 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
         return if (isDoneSomething) environment.outputItemsCollector else null
     }
 
+    private fun loadPlugins(
+        representativeTarget: KotlinModuleBuildTarget<*>,
+        commonArguments: CommonCompilerArguments,
+        context: CompileContext
+    ) {
+        fun concatenate(strings: Array<String>?, cp: List<String>) = arrayOf(*strings.orEmpty(), *cp.toTypedArray())
+
+        for (argumentProvider in ServiceLoader.load(KotlinJpsCompilerArgumentsProvider::class.java)) {
+            val jpsModuleBuildTarget = representativeTarget.jpsModuleBuildTarget
+            // appending to pluginOptions
+            commonArguments.pluginOptions = concatenate(
+                commonArguments.pluginOptions,
+                argumentProvider.getExtraArguments(jpsModuleBuildTarget, context)
+            )
+            // appending to classpath
+            commonArguments.pluginClasspaths = concatenate(
+                commonArguments.pluginClasspaths,
+                argumentProvider.getClasspath(jpsModuleBuildTarget, context)
+            )
+
+            LOG.debug("Plugin loaded: ${argumentProvider::class.java.simpleName}")
+        }
+    }
+
     private fun createCompileEnvironment(
+        context: CompileContext,
         kotlinModuleBuilderTarget: KotlinModuleBuildTarget<*>,
         incrementalCaches: Map<KotlinModuleBuildTarget<*>, JpsIncrementalCache>,
         lookupTracker: LookupTracker,
@@ -544,7 +559,7 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
             classesToLoadByParent,
             messageCollector,
             OutputItemsCollectorImpl(),
-            ProgressReporterImpl(kotlinModuleBuilderTarget.jpsContext, chunk)
+            ProgressReporterImpl(context, chunk)
         )
     }
 

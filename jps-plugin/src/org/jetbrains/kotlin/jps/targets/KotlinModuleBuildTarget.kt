@@ -47,8 +47,14 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo> intern
     val kotlinContext: KotlinCompileContext,
     val jpsModuleBuildTarget: ModuleBuildTarget
 ) {
-    // TODO(1.2.80): got rid of jpsContext and replace it with kotlinContext
-    val jpsContext: CompileContext
+    /**
+     * Note: beware of using this context for getting compilation round dependent data:
+     * for example groovy can provide temp source roots with stubs, and it will be visible
+     * only in round local compile context.
+     *
+     * TODO(1.2.80): got rid of jpsGlobalContext and replace it with kotlinContext
+     */
+    val jpsGlobalContext: CompileContext
         get() = kotlinContext.jpsContext
 
     // Initialized in KotlinCompileContext.loadTargets
@@ -127,21 +133,35 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo> intern
             .includedIn(JpsJavaClasspathKind.compile(isTests))
     }
 
-    val sources: Map<File, Source> by lazy {
-        mutableMapOf<File, Source>().also { result ->
-            collectSources(result)
+    /**
+     * All sources of this target (including non dirty).
+     * Initialized lazily based on global context and will be updated on each round based on round local context.
+     *
+     * Update required since source roots can be changed, for example groovy can provide new temporary source roots with stubs.
+     * Lazy initialization is required for friend build targets, when friends are not compiled in this build run.
+     */
+    val sources: Map<File, Source>
+        get() = _sources ?: synchronized(this) {
+            _sources ?: updateSourcesList(jpsGlobalContext)
         }
+
+    @Volatile
+    private var _sources: Map<File, Source>? = null
+
+    fun nextRound(localContext: CompileContext) {
+        updateSourcesList(localContext)
     }
 
-    private fun collectSources(receiver: MutableMap<File, Source>) {
+    private fun updateSourcesList(localContext: CompileContext): Map<File, Source> {
+        val result = mutableMapOf<File, Source>()
         val moduleExcludes = module.excludeRootsList.urls.mapTo(java.util.HashSet(), JpsPathUtil::urlToFile)
 
         val compilerExcludes = JpsJavaExtensionService.getInstance()
             .getOrCreateCompilerConfiguration(module.project)
             .compilerExcludes
 
-        val buildRootIndex = jpsContext.projectDescriptor.buildRootIndex
-        val roots = buildRootIndex.getTargetRoots(jpsModuleBuildTarget, jpsContext)
+        val buildRootIndex = localContext.projectDescriptor.buildRootIndex
+        val roots = buildRootIndex.getTargetRoots(jpsModuleBuildTarget, localContext)
         roots.forEach { rootDescriptor ->
             val isIncludedSourceRoot = rootDescriptor is KotlinIncludedModuleSourceRoot
 
@@ -149,11 +169,14 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo> intern
                 .onEnter { file -> file !in moduleExcludes }
                 .forEach { file ->
                     if (!compilerExcludes.isExcluded(file) && file.isFile && file.isKotlinSourceFile) {
-                        receiver[file] = Source(file, isIncludedSourceRoot)
+                        result[file] = Source(file, isIncludedSourceRoot)
                     }
                 }
 
         }
+
+        this._sources = result
+        return result
     }
 
     /**
@@ -212,6 +235,7 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo> intern
      * Called for `ModuleChunk.representativeTarget`
      */
     open fun updateChunkMappings(
+        localContext: CompileContext,
         chunk: ModuleChunk,
         dirtyFilesHolder: KotlinDirtySourceFilesHolder,
         outputItems: Map<ModuleBuildTarget, Iterable<GeneratedFile>>,
@@ -241,7 +265,7 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo> intern
             register(ExpectActualTracker::class.java, exceptActualTracer)
             register(CompilationCanceledStatus::class.java, object : CompilationCanceledStatus {
                 override fun checkCanceled() {
-                    if (jpsContext.cancelStatus.isCanceled) throw CompilationCanceledException()
+                    if (jpsGlobalContext.cancelStatus.isCanceled) throw CompilationCanceledException()
                 }
             })
         }
@@ -280,7 +304,7 @@ abstract class KotlinModuleBuildTarget<BuildMetaInfoType : BuildMetaInfo> intern
         val hasRemovedSources = dirtyFilesHolder.getRemovedFiles(target.jpsModuleBuildTarget).isNotEmpty()
         val hasDirtyOrRemovedSources = moduleSources.isNotEmpty() || hasRemovedSources
         if (hasDirtyOrRemovedSources) {
-            val logger = jpsContext.loggingManager.projectBuilderLogger
+            val logger = jpsGlobalContext.loggingManager.projectBuilderLogger
             if (logger.isEnabled) {
                 logger.logCompiledFiles(moduleSources, KotlinBuilder.KOTLIN_BUILDER_NAME, "Compiling files:")
             }

@@ -24,7 +24,7 @@ data class CacheAttributesDiff<Attrs: Any>(
                 else CacheStatus.INVALID
             } else {
                 if (actual != null) CacheStatus.SHOULD_BE_CLEARED
-                else CacheStatus.VALID
+                else CacheStatus.CLEARED
             }
 
     fun saveExpectedIfNeeded() {

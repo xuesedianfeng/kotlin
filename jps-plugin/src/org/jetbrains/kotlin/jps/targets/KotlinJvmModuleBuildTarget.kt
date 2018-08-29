@@ -160,7 +160,7 @@ class KotlinJvmModuleBuildTarget(kotlinContext: KotlinCompileContext, jpsModuleB
                 kotlinModuleId.name,
                 outputDir.absolutePath,
                 moduleSources,
-                target.findSourceRoots(jpsContext),
+                target.findSourceRoots(dirtyFilesHolder.context),
                 target.findClassPathRoots(),
                 commonSources,
                 target.findModularJdkRoot(),
@@ -261,13 +261,14 @@ class KotlinJvmModuleBuildTarget(kotlinContext: KotlinCompileContext, jpsModuleB
         get() = "jvm"
 
     override fun updateChunkMappings(
+        localContext: CompileContext,
         chunk: ModuleChunk,
         dirtyFilesHolder: KotlinDirtySourceFilesHolder,
         outputItems: Map<ModuleBuildTarget, Iterable<GeneratedFile>>,
         incrementalCaches: Map<KotlinModuleBuildTarget<*>, JpsIncrementalCache>
     ) {
-        val previousMappings = jpsContext.projectDescriptor.dataManager.mappings
-        val callback = JavaBuilderUtil.getDependenciesRegistrar(jpsContext)
+        val previousMappings = localContext.projectDescriptor.dataManager.mappings
+        val callback = JavaBuilderUtil.getDependenciesRegistrar(localContext)
 
         val targetDirtyFiles: Map<ModuleBuildTarget, Set<File>> = chunk.targets.keysToMap {
             val files = HashSet<File>()
@@ -305,7 +306,7 @@ class KotlinJvmModuleBuildTarget(kotlinContext: KotlinCompileContext, jpsModuleB
         }
 
         val allCompiled = dirtyFilesHolder.allDirtyFiles
-        JavaBuilderUtil.registerFilesToCompile(jpsContext, allCompiled)
-        JavaBuilderUtil.registerSuccessfullyCompiled(jpsContext, allCompiled)
+        JavaBuilderUtil.registerFilesToCompile(localContext, allCompiled)
+        JavaBuilderUtil.registerSuccessfullyCompiled(localContext, allCompiled)
     }
 }
