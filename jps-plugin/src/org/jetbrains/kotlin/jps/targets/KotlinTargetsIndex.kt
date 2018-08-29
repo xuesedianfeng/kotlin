@@ -11,11 +11,13 @@ import org.jetbrains.jps.model.java.JpsJavaExtensionService
 import org.jetbrains.jps.model.library.JpsOrderRootType
 import org.jetbrains.jps.util.JpsPathUtil
 import org.jetbrains.kotlin.config.TargetPlatformKind
+import org.jetbrains.kotlin.jps.build.KotlinBuilder
 import org.jetbrains.kotlin.jps.build.KotlinChunk
 import org.jetbrains.kotlin.jps.build.KotlinCompileContext
 import org.jetbrains.kotlin.jps.build.ModuleBuildTarget
 import org.jetbrains.kotlin.jps.model.targetPlatform
 import org.jetbrains.kotlin.utils.LibraryUtils
+import kotlin.system.measureTimeMillis
 
 class KotlinTargetsIndex(
     val byJpsTarget: Map<ModuleBuildTarget, KotlinModuleBuildTarget<*>>,
@@ -31,26 +33,30 @@ internal class KotlinTargetsIndexBuilder internal constructor(
     private val chunks = mutableListOf<KotlinChunk>()
 
     fun build(): KotlinTargetsIndex {
-        val jpsContext = uninitializedContext.jpsContext
+        val time = measureTimeMillis {
+            val jpsContext = uninitializedContext.jpsContext
 
-        // visit all kotlin build targets
-        jpsContext.projectDescriptor.buildTargetIndex.getSortedTargetChunks(jpsContext).forEach { chunk ->
-            val moduleBuildTargets = chunk.targets.mapNotNull {
-                if (it is ModuleBuildTarget) ensureLoaded(it)!!
-                else null
-            }
-
-            if (moduleBuildTargets.isNotEmpty()) {
-                val kotlinChunk = KotlinChunk(uninitializedContext, moduleBuildTargets)
-                moduleBuildTargets.forEach {
-                    it.chunk = kotlinChunk
+            // visit all kotlin build targets
+            jpsContext.projectDescriptor.buildTargetIndex.getSortedTargetChunks(jpsContext).forEach { chunk ->
+                val moduleBuildTargets = chunk.targets.mapNotNull {
+                    if (it is ModuleBuildTarget) ensureLoaded(it)!!
+                    else null
                 }
 
-                chunks.add(kotlinChunk)
+                if (moduleBuildTargets.isNotEmpty()) {
+                    val kotlinChunk = KotlinChunk(uninitializedContext, moduleBuildTargets)
+                    moduleBuildTargets.forEach {
+                        it.chunk = kotlinChunk
+                    }
+
+                    chunks.add(kotlinChunk)
+                }
             }
+
+            calculateChunkDependencies()
         }
 
-        calculateChunkDependencies()
+        KotlinBuilder.LOG.info("KotlinTargetsIndex created in $time ms")
 
         return KotlinTargetsIndex(
             byJpsModuleBuildTarget,

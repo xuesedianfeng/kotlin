@@ -55,6 +55,7 @@ import org.jetbrains.kotlin.utils.PathUtil
 import java.io.File
 import java.util.*
 import kotlin.collections.HashSet
+import kotlin.system.measureTimeMillis
 
 class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
     companion object {
@@ -111,16 +112,22 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
     private fun initializeKotlinContext(context: CompileContext): KotlinCompileContext {
         logSettings(context)
 
-        val kotlinContext = KotlinCompileContext(context)
+        lateinit var kotlinContext: KotlinCompileContext
 
-        context.putUserData(kotlinCompileContextKey, kotlinContext)
-        context.testingContext?.kotlinCompileContext = kotlinContext
+        val time = measureTimeMillis {
+            kotlinContext = KotlinCompileContext(context)
 
-        if (kotlinContext.shouldCheckCacheVersions && kotlinContext.hasKotlin()) {
-            kotlinContext.checkCacheVersions()
+            context.putUserData(kotlinCompileContextKey, kotlinContext)
+            context.testingContext?.kotlinCompileContext = kotlinContext
+
+            if (kotlinContext.shouldCheckCacheVersions && kotlinContext.hasKotlin()) {
+                kotlinContext.checkCacheVersions()
+            }
+
+            kotlinContext.cleanupCaches()
         }
 
-        kotlinContext.cleanupCaches()
+        LOG.info("Total Kotlin global compile context initialization time: $time ms")
 
         return kotlinContext
     }
