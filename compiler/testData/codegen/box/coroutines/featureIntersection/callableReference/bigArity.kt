@@ -3,15 +3,15 @@
 // WITH_REFLECT
 // WITH_COROUTINES
 
-import kotlin.reflect.full.callSuspend
+import kotlin.reflect.full.*
 import helpers.*
 import kotlin.coroutines.*
 
 class A {
     suspend fun foo(
-        p00: A, p01: A, p02: A, p03: A, p04: A, p05: A, p06: A, p07: A, p08: A, p09: A,
-        p10: A, p11: A, p12: A, p13: A, p14: A, p15: A, p16: A, p17: A, p18: A, p19: A,
-        p20: A, p21: A, p22: A, p23: A, p24: A, p25: A, p26: A, p27: A, p28: A, p29: String
+        p00: Long = 1, p01: A = A(), p02: A = A(), p03: A = A(), p04: A = A(), p05: A = A(), p06: A = A(), p07: A = A(), p08: A = A(), p09: A = A(),
+        p10: A = A(), p11: A = A(), p12: A = A(), p13: A = A(), p14: A = A(), p15: A = A(), p16: A = A(), p17: A = A(), p18: A = A(), p19: A = A(),
+        p20: A = A(), p21: A = A(), p22: A = A(), p23: A = A(), p24: A = A(), p25: A = A(), p26: A = A(), p27: A = A(), p28: A = A(), p29: String
     ): String {
         return p29
     }
@@ -21,21 +21,24 @@ fun builder(c: suspend () -> Unit) {
     c.startCoroutine(EmptyContinuation)
 }
 
-suspend fun expectsLambdaWithBigArity(c: suspend (A, A, A, A, A, A, A, A, A, A,
-                                                  A, A, A, A, A, A, A, A, A, A,
-                                                  A, A, A, A, A, A, A, A, A, String) -> String): String {
-    val a = A()
-    return c.invoke(a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, "OK")
+suspend fun expectsLambdaWithBigArity(c: suspend (Long, Long, Long, Long, Long, Long, Long, Long, Long, Long,
+                                                  Long, Long, Long, Long, Long, Long, Long, Long, Long, Long,
+                                                  Long, Long, Long, Long, Long, Long, Long, Long, Long, String) -> String): String {
+    return c.invoke(1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, "OK")
 }
 
 fun box(): String {
     val a = A()
     var res = "FAIL 1"
     builder {
-        res = A::foo.callSuspend(a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, "OK")
+        res = A::foo.callSuspend(a, 1L, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a, "OK")
+    }
+    res = "FAIL 2"
+    builder {
+        res = A::foo.callSuspendBy(mapOf(A::foo.parameters.first() to A(), A::foo.parameters.last() to "OK")) as String
     }
     if (res != "OK") return res
-    res = "FAIL 2"
+    res = "FAIL 3"
     builder {
         res = expectsLambdaWithBigArity { _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, s -> s }
     }

@@ -373,7 +373,7 @@ class CoroutineCodegenForLambda private constructor(
             for (parameter in allFunctionParameters()) {
                 val fieldInfoForCoroutineLambdaParameter = parameter.getFieldInfoForCoroutineLambdaParameter()
                 if (isBigArity) {
-                    load(cloneIndex, fieldInfoForCoroutineLambdaParameter.fieldType)
+                    load(cloneIndex, fieldInfoForCoroutineLambdaParameter.ownerType)
                     load(1, AsmTypes.OBJECT_TYPE)
                     iconst(index - 1)
                     aload(AsmTypes.OBJECT_TYPE)
@@ -398,7 +398,7 @@ class CoroutineCodegenForLambda private constructor(
                         generateErasedCreate
                     )
                 }
-                index += fieldInfoForCoroutineLambdaParameter.fieldType.size
+                index += if (isBigArity || generateErasedCreate) 1 else fieldInfoForCoroutineLambdaParameter.fieldType.size
             }
 
             load(cloneIndex, AsmTypes.OBJECT_TYPE)

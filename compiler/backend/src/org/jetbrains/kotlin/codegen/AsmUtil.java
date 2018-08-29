@@ -749,7 +749,7 @@ public class AsmUtil {
             @NotNull FrameMap frameMap,
             @NotNull ParameterDescriptor parameter,
             @NotNull String name,
-            FunctionDescriptor containingDeclaration
+            @NotNull FunctionDescriptor containingDeclaration
     ) {
         KotlinType type = parameter.getType();
         if (isNullableType(type) || InlineClassesUtilsKt.isNullableUnderlyingType(type)) return;
