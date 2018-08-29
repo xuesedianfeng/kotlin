@@ -37,8 +37,8 @@ abstract class AbstractIncrementalCacheVersionChangedTest : AbstractIncrementalJ
             }
 
             versions.forEach {
-                if (it.versionFile.exists()) {
-                    it.versionFile.writeText("777")
+                if (it.versionFileForTesting.exists()) {
+                    it.versionFileForTesting.writeText("777")
                 }
             }
         }

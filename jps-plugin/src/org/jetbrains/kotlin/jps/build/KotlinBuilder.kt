@@ -85,6 +85,27 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
 
     override fun getCompilableFileExtensions() = arrayListOf("kt", "kts")
 
+    override fun buildStarted(context: CompileContext) {
+        logSettings(context)
+    }
+
+    private fun logSettings(context: CompileContext) {
+        LOG.debug("==========================================")
+        LOG.info("is Kotlin incremental compilation enabled for JVM: ${IncrementalCompilation.isEnabledForJvm()}")
+        LOG.info("is Kotlin incremental compilation enabled for JS: ${IncrementalCompilation.isEnabledForJs()}")
+        if (IncrementalCompilation.isEnabledForJs()) {
+            val messageCollector = MessageCollectorAdapter(context, null)
+            messageCollector.report(INFO, "Using experimental incremental compilation for Kotlin/JS")
+        }
+
+        LOG.info("is Kotlin compiler daemon enabled: ${isDaemonEnabled()}")
+
+        val historyLabel = context.getBuilderParameter("history label")
+        if (historyLabel != null) {
+            LOG.info("Label in local history: $historyLabel")
+        }
+    }
+
     /**
      * Ensure Kotlin Context initialized.
      * Kotlin Context should be initialized only when required (before first kotlin chunk build).
@@ -99,9 +120,7 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
             if (actualKotlinCompileContext != null) return actualKotlinCompileContext
 
             try {
-                val newKotlinCompileContext = initializeKotlinContext(context)
-                context.putUserData(kotlinCompileContextKey, newKotlinCompileContext)
-                return newKotlinCompileContext
+                return initializeKotlinContext(context)
             } catch (t: Throwable) {
                 jpsReportInternalBuilderError(context, Error("Cannot initialize Kotlin context: ${t.message}", t))
                 throw t
@@ -110,8 +129,6 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
     }
 
     private fun initializeKotlinContext(context: CompileContext): KotlinCompileContext {
-        logSettings(context)
-
         lateinit var kotlinContext: KotlinCompileContext
 
         val time = measureTimeMillis {
@@ -130,23 +147,6 @@ class KotlinBuilder : ModuleLevelBuilder(BuilderCategory.SOURCE_PROCESSOR) {
         LOG.info("Total Kotlin global compile context initialization time: $time ms")
 
         return kotlinContext
-    }
-
-    private fun logSettings(context: CompileContext) {
-        LOG.debug("==========================================")
-        LOG.info("is Kotlin incremental compilation enabled for JVM: ${IncrementalCompilation.isEnabledForJvm()}")
-        LOG.info("is Kotlin incremental compilation enabled for JS: ${IncrementalCompilation.isEnabledForJs()}")
-        if (IncrementalCompilation.isEnabledForJs()) {
-            val messageCollector = MessageCollectorAdapter(context, null)
-            messageCollector.report(INFO, "Using experimental incremental compilation for Kotlin/JS")
-        }
-
-        LOG.info("is Kotlin compiler daemon enabled: ${isDaemonEnabled()}")
-
-        val historyLabel = context.getBuilderParameter("history label")
-        if (historyLabel != null) {
-            LOG.info("Label in local history: $historyLabel")
-        }
     }
 
     override fun buildFinished(context: CompileContext) {

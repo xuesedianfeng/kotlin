@@ -22,14 +22,12 @@ class CompositeLookupsCacheAttributesManager(
     rootPath: File,
     expectedComponents: Set<String>
 ) : CacheAttributesManager<CompositeLookupsCacheAttributes> {
-    @get:TestOnly
-    val versionManager = lookupsCacheVersionManager(
+    private val versionManager = lookupsCacheVersionManager(
         rootPath,
         expectedComponents.isNotEmpty()
     )
 
-    @get:TestOnly
-    val actualComponentsFile = File(rootPath, "components.txt")
+    private val actualComponentsFile = File(rootPath, "components.txt")
 
     override val expected: CompositeLookupsCacheAttributes? =
         if (expectedComponents.isEmpty()) null
@@ -66,6 +64,10 @@ class CompositeLookupsCacheAttributesManager(
         // (components that are not required anymore are not not interfere)
         return actual.version == expected.version && actual.components.containsAll(expected.components)
     }
+
+    @get:TestOnly
+    val versionManagerForTesting
+        get() = versionManager
 }
 
 data class CompositeLookupsCacheAttributes(

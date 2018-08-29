@@ -18,8 +18,7 @@ import java.io.IOException
  * Based on that status system may perform required actions (i.e. rebuild something, clearing caches, etc...).
  */
 class CacheVersionManager(
-    @get:TestOnly
-    val versionFile: File,
+    private val versionFile: File,
     expectedOwnVersion: Int?
 ) : CacheAttributesManager<CacheVersion> {
     override val expected: CacheVersion? =
@@ -52,6 +51,10 @@ class CacheVersionManager(
             versionFile.writeText(values.version.toString())
         }
     }
+
+    @get:TestOnly
+    val versionFileForTesting: File
+        get() = versionFile
 }
 
 data class CacheVersion(val version: Int)

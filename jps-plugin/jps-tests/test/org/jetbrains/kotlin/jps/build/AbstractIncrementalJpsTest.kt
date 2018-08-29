@@ -160,7 +160,7 @@ abstract class AbstractIncrementalJpsTest(
 
             builder.build(finalScope, false)
 
-            // testingContext.kotlinCompileContext is initialized in KotlinCompileContext constructor
+            // testingContext.kotlinCompileContext is initialized in KotlinBuilder.initializeKotlinContext
             kotlinCompileContext = testingContext.kotlinCompileContext!!
 
             lookupTracker.lookups.mapTo(lookupsDuringTest) { LookupSymbol(it.name, it.scopeFqName) }
