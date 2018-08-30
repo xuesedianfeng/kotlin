@@ -8,7 +8,7 @@ package org.jetbrains.kotlin.backend.jvm.lower
 import org.jetbrains.kotlin.backend.common.ClassLoweringPass
 import org.jetbrains.kotlin.backend.common.lower.DECLARATION_ORIGIN_FUNCTION_FOR_DEFAULT_PARAMETER
 import org.jetbrains.kotlin.backend.common.lower.InitializersLowering.Companion.clinitName
-import org.jetbrains.kotlin.backend.common.lower.VariableRemapper
+import org.jetbrains.kotlin.backend.common.lower.VariableRemapperDesc
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.codegen.AsmUtil
 import org.jetbrains.kotlin.descriptors.*
@@ -121,9 +121,10 @@ internal fun FunctionDescriptor.createFunctionAndMapVariables(
         body = oldFunction.body
         returnType = oldFunction.returnType
         createParameterDeclarations()
-        val mapping: Map<IrValueParameter, IrValueParameter> =
-            (listOfNotNull(oldFunction.dispatchReceiverParameter!!, oldFunction.extensionReceiverParameter) + oldFunction.valueParameters)
-        .zip(valueParameters).toMap()
+        // TODO: do we really need descriptor here? This workaround is about coping `dispatchReceiver` descriptor
+        val mapping: Map<ValueDescriptor, IrValueParameter> =
+            (listOfNotNull(oldFunction.dispatchReceiverParameter!!.descriptor, oldFunction.extensionReceiverParameter?.descriptor) + oldFunction.valueParameters.map { it.descriptor })
+                .zip(valueParameters).toMap()
 
-        body?.transform(VariableRemapper(mapping), null)
+        body?.transform(VariableRemapperDesc(mapping), null)
     }
