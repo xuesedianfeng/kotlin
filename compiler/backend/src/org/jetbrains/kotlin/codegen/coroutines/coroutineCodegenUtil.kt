@@ -51,8 +51,7 @@ import org.jetbrains.org.objectweb.asm.commons.Method
 import org.jetbrains.org.objectweb.asm.tree.MethodNode
 
 const val COROUTINE_LABEL_FIELD_NAME = "label"
-@JvmField
-val SUSPEND_FUNCTION_CREATE_METHOD_NAME = "create"
+const val SUSPEND_FUNCTION_CREATE_METHOD_NAME = "create"
 const val DO_RESUME_METHOD_NAME = "doResume"
 const val INVOKE_SUSPEND_METHOD_NAME = "invokeSuspend"
 const val EXCEPTION_FIELD_NAME = "exception"
