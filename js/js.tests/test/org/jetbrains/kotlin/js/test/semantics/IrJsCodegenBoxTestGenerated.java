@@ -5501,6 +5501,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
                 KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/testData/codegen/box/coroutines/bridges"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.JS_IR, true);
             }
 
+            @TestMetadata("lambdaWithLongReceiver.kt")
+            public void testLambdaWithLongReceiver_1_2() throws Exception {
+                runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/bridges/lambdaWithLongReceiver.kt", "kotlin.coroutines.experimental");
+            }
+
             @TestMetadata("lambdaWithMultipleParameters.kt")
             public void testLambdaWithMultipleParameters_1_2() throws Exception {
                 runTestWithPackageReplacement("compiler/testData/codegen/box/coroutines/bridges/lambdaWithMultipleParameters.kt", "kotlin.coroutines.experimental");
