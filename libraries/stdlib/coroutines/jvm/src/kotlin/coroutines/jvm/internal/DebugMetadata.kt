@@ -23,7 +23,9 @@ internal annotation class DebugMetadata(
     @get:JvmName("m")
     val methodName: String,
     @get:JvmName("c")
-    val className: String
+    val className: String,
+    @get:JvmName("v")
+    val version: Int
 )
 
 /**
@@ -38,6 +40,9 @@ internal annotation class DebugMetadata(
 @JvmName("getStackTraceElement")
 internal fun BaseContinuationImpl.getStackTraceElementImpl(): StackTraceElement? {
     val debugMetadata = getDebugMetadataAnnotation() ?: return null
+    if (debugMetadata.version > COROUTINES_DEBUG_METADATA_VERSION) {
+        error("Debug metadata version mismatch. Expected: $COROUTINES_DEBUG_METADATA_VERSION, got ${debugMetadata.version}. Update stdlib.")
+    }
     val label = getLabel()
     val lineNumber = if (label < 0) -1 else debugMetadata.lineNumbers[label]
     return StackTraceElement(debugMetadata.className, debugMetadata.methodName, debugMetadata.sourceFile, lineNumber)
@@ -70,6 +75,9 @@ private fun BaseContinuationImpl.getLabel(): Int =
 @JvmName("getSpilledVariableFieldMapping")
 internal fun BaseContinuationImpl.getSpilledVariableFieldMapping(): Array<String>? {
     val debugMetadata = getDebugMetadataAnnotation() ?: return null
+    if (debugMetadata.version > COROUTINES_DEBUG_METADATA_VERSION) {
+        error("Debug metadata version mismatch. Expected: $COROUTINES_DEBUG_METADATA_VERSION, got ${debugMetadata.version}. Update stdlib.")
+    }
     val res = arrayListOf<String>()
     val label = getLabel()
     for ((i, labelOfIndex) in debugMetadata.indexToLabel.withIndex()) {
@@ -80,3 +88,5 @@ internal fun BaseContinuationImpl.getSpilledVariableFieldMapping(): Array<String
     }
     return res.toTypedArray()
 }
+
+internal const val COROUTINES_DEBUG_METADATA_VERSION = 1
