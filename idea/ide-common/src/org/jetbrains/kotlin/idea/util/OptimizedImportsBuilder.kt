@@ -266,7 +266,8 @@ class OptimizedImportsBuilder(
                 append("\n")
             }
         }
-        val fileWithImports = KtPsiFactory(originalFile).createAnalyzableFile("Dummy.kt", fileText, originalFile)
+        val fileWithImports = KtPsiFactory(originalFile).createAnalyzableFile(originalFile.name, fileText, originalFile)
+        fileWithImports.originalFile = originalFile
         return fileWithImports.getFileResolutionScope()
     }
 

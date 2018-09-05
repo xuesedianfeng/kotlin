@@ -47,6 +47,7 @@ import org.jetbrains.kotlin.resolve.scopes.utils.findClassifier
 import org.jetbrains.kotlin.resolve.scopes.utils.findFunction
 import org.jetbrains.kotlin.resolve.scopes.utils.findPackage
 import org.jetbrains.kotlin.resolve.scopes.utils.findVariable
+import org.jetbrains.kotlin.script.ScriptDependenciesProvider
 import org.jetbrains.kotlin.utils.addIfNotNull
 import java.util.*
 
@@ -62,7 +63,13 @@ class ImportInsertHelperImpl(private val project: Project) : ImportInsertHelper(
         val languageVersionSettings = contextFile.getResolutionFacade().frontendService<LanguageVersionSettings>()
         val platform = TargetPlatformDetector.getPlatform(contextFile)
         val allDefaultImports = platform.getDefaultImports(languageVersionSettings, includeLowPriorityImports = true)
-        return importPath.isImported(allDefaultImports, platform.excludedImports)
+        return if (contextFile.isScript()) {
+            val scriptExternalDependencies = ScriptDependenciesProvider.getInstance(project).getScriptDependencies(contextFile)
+            val extraImports = scriptExternalDependencies?.imports?.map { ImportPath.fromString(it) }.orEmpty()
+            importPath.isImported(allDefaultImports + extraImports, platform.excludedImports)
+        } else {
+            importPath.isImported(allDefaultImports, platform.excludedImports)
+        }
     }
 
     override fun isImportedWithLowPriorityDefaultImport(importPath: ImportPath, contextFile: KtFile): Boolean {
