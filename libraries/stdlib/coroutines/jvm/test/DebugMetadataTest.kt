@@ -25,8 +25,7 @@ import kotlin.test.assertEquals
     localNames = ["a", "b", "b", "c", "c"],
     spilled = ["L$1", "L$2", "L$1", "L$2", "L$1"],
     methodName = "testMethod",
-    className = "SomeClass",
-    version = 1
+    className = "SomeClass"
 )
 private class MyContinuation : BaseContinuationImpl(null) {
     override val context: CoroutineContext

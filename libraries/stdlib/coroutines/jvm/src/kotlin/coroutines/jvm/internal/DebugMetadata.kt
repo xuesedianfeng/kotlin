@@ -5,27 +5,25 @@
 
 package kotlin.coroutines.jvm.internal
 
-import kotlin.coroutines.Continuation
-
 @Target(AnnotationTarget.CLASS)
 @SinceKotlin("1.3")
 internal annotation class DebugMetadata(
-    @get:JvmName("f")
-    val sourceFile: String,
-    @get:JvmName("l")
-    val lineNumbers: IntArray,
-    @get:JvmName("n")
-    val localNames: Array<String>,
-    @get:JvmName("s")
-    val spilled: Array<String>,
-    @get:JvmName("i")
-    val indexToLabel: IntArray,
-    @get:JvmName("m")
-    val methodName: String,
-    @get:JvmName("c")
-    val className: String,
     @get:JvmName("v")
-    val version: Int
+    val version: Int = 1,
+    @get:JvmName("f")
+    val sourceFile: String = "",
+    @get:JvmName("l")
+    val lineNumbers: IntArray = [],
+    @get:JvmName("n")
+    val localNames: Array<String> = [],
+    @get:JvmName("s")
+    val spilled: Array<String> = [],
+    @get:JvmName("i")
+    val indexToLabel: IntArray = [],
+    @get:JvmName("m")
+    val methodName: String = "",
+    @get:JvmName("c")
+    val className: String = ""
 )
 
 /**
@@ -40,9 +38,7 @@ internal annotation class DebugMetadata(
 @JvmName("getStackTraceElement")
 internal fun BaseContinuationImpl.getStackTraceElementImpl(): StackTraceElement? {
     val debugMetadata = getDebugMetadataAnnotation() ?: return null
-    if (debugMetadata.version > COROUTINES_DEBUG_METADATA_VERSION) {
-        error("Debug metadata version mismatch. Expected: $COROUTINES_DEBUG_METADATA_VERSION, got ${debugMetadata.version}. Update stdlib.")
-    }
+    checkDebugMetadataVersion(COROUTINES_DEBUG_METADATA_VERSION, debugMetadata.version)
     val label = getLabel()
     val lineNumber = if (label < 0) -1 else debugMetadata.lineNumbers[label]
     return StackTraceElement(debugMetadata.className, debugMetadata.methodName, debugMetadata.sourceFile, lineNumber)
@@ -60,6 +56,12 @@ private fun BaseContinuationImpl.getLabel(): Int =
         -1
     }
 
+private fun checkDebugMetadataVersion(expected: Int, actual: Int) {
+    if (actual > expected) {
+        error("Debug metadata version mismatch. Expected: $expected, got $actual. Please update the Kotlin standard library.")
+    }
+}
+
 /**
  * Returns an array of spilled variable names and continuation's field names where the variable has been spilled.
  * The structure is the following:
@@ -75,9 +77,7 @@ private fun BaseContinuationImpl.getLabel(): Int =
 @JvmName("getSpilledVariableFieldMapping")
 internal fun BaseContinuationImpl.getSpilledVariableFieldMapping(): Array<String>? {
     val debugMetadata = getDebugMetadataAnnotation() ?: return null
-    if (debugMetadata.version > COROUTINES_DEBUG_METADATA_VERSION) {
-        error("Debug metadata version mismatch. Expected: $COROUTINES_DEBUG_METADATA_VERSION, got ${debugMetadata.version}. Update stdlib.")
-    }
+    checkDebugMetadataVersion(COROUTINES_DEBUG_METADATA_VERSION, debugMetadata.version)
     val res = arrayListOf<String>()
     val label = getLabel()
     for ((i, labelOfIndex) in debugMetadata.indexToLabel.withIndex()) {
