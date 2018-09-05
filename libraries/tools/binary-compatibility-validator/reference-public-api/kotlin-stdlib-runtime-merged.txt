@@ -2575,7 +2575,7 @@ public final class kotlin/concurrent/TimersKt {
 	public static final fun timer (Ljava/lang/String;Z)Ljava/util/Timer;
 }
 
-public abstract interface class kotlin/contracts/CallsInPlace : kotlin/contracts/SimpleEffect {
+public abstract interface class kotlin/contracts/CallsInPlace : kotlin/contracts/Effect {
 }
 
 public abstract interface class kotlin/contracts/ConditionalEffect : kotlin/contracts/Effect {

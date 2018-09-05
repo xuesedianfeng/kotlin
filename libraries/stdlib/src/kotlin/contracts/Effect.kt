@@ -40,4 +40,4 @@ public interface ReturnsNotNull : SimpleEffect
 @ContractsDsl
 @ExperimentalContracts
 @SinceKotlin("1.3")
-public interface CallsInPlace : SimpleEffect
+public interface CallsInPlace : Effect
