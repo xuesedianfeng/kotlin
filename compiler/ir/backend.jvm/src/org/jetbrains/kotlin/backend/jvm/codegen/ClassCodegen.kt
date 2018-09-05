@@ -37,7 +37,6 @@ import org.jetbrains.kotlin.resolve.source.getPsi
 import org.jetbrains.kotlin.types.ErrorUtils
 import org.jetbrains.org.objectweb.asm.Opcodes
 import org.jetbrains.org.objectweb.asm.Type
-import java.lang.RuntimeException
 
 open class ClassCodegen protected constructor(
     internal val irClass: IrClass,
@@ -85,7 +84,7 @@ open class ClassCodegen protected constructor(
             signature.superclassName,
             signature.interfaces.toTypedArray()
         )
-        AnnotationCodegen.forClass(visitor.visitor, this, typeMapper).genAnnotations(descriptor, null)
+        AnnotationCodegen.forClass(visitor.visitor, this, state).genAnnotations(descriptor, null)
         visitor.visitSource(irClass.symbol.descriptor.source.containingFile.name!!, null)
 
         irClass.declarations.forEach {
@@ -160,7 +159,7 @@ open class ClassCodegen protected constructor(
         )
 
         if (field.origin == JvmLoweredDeclarationOrigin.FIELD_FOR_ENUM_ENTRY) {
-            AnnotationCodegen.forField(fv, this, typeMapper).genAnnotations(field.descriptor, null)
+            AnnotationCodegen.forField(fv, this, state).genAnnotations(field.descriptor, null)
         } else {
 
         }

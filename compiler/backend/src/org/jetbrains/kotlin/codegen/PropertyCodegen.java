@@ -278,7 +278,7 @@ public class PropertyCodegen {
         PropertyGetterDescriptor getter = descriptor.getGetter();
         assert getter != null : "Annotation property should have a getter: " + descriptor;
         v.getSerializationBindings().put(METHOD_FOR_FUNCTION, getter, asmMethod);
-        FunctionCodegen.generateMethodAnnotations(getter, asmMethod, mv, memberCodegen, typeMapper);
+        FunctionCodegen.generateMethodAnnotations(getter, asmMethod, mv, memberCodegen, state);
 
         KtExpression defaultValue = loadAnnotationArgumentDefaultValue(parameter, descriptor, expectedAnnotationConstructor);
         if (defaultValue != null) {
@@ -287,7 +287,7 @@ public class PropertyCodegen {
             assert !state.getClassBuilderMode().generateBodies || constant != null
                     : "Default value for annotation parameter should be compile time value: " + defaultValue.getText();
             if (constant != null) {
-                AnnotationCodegen annotationCodegen = AnnotationCodegen.forAnnotationDefaultValue(mv, memberCodegen, typeMapper);
+                AnnotationCodegen annotationCodegen = AnnotationCodegen.forAnnotationDefaultValue(mv, memberCodegen, state);
                 annotationCodegen.generateAnnotationDefaultValue(constant, descriptor.getType());
             }
         }
@@ -429,7 +429,7 @@ public class PropertyCodegen {
             );
 
             Annotated fieldAnnotated = new AnnotatedWithFakeAnnotations(propertyDescriptor, annotations);
-            AnnotationCodegen.forField(fv, memberCodegen, typeMapper).genAnnotations(
+            AnnotationCodegen.forField(fv, memberCodegen, state).genAnnotations(
                     fieldAnnotated, type, isDelegate ? AnnotationUseSiteTarget.PROPERTY_DELEGATE_FIELD : AnnotationUseSiteTarget.FIELD);
         }
     }

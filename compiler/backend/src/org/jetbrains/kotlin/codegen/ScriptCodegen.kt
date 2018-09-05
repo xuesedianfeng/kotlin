@@ -49,7 +49,7 @@ class ScriptCodegen private constructor(
                 typeMapper.mapSupertype(scriptDescriptor.getSuperClassOrAny().defaultType, null).internalName,
                 mapSupertypesNames(typeMapper, scriptDescriptor.getSuperInterfaces(), null)
         )
-        AnnotationCodegen.forClass(v.visitor, this, typeMapper).genAnnotations(scriptDescriptor, null)
+        AnnotationCodegen.forClass(v.visitor, this, state).genAnnotations(scriptDescriptor, null)
     }
 
     override fun generateBody() {
@@ -99,7 +99,7 @@ class ScriptCodegen private constructor(
                 OtherOrigin(scriptDeclaration, scriptDescriptor.unsubstitutedPrimaryConstructor),
                 ACC_PUBLIC, jvmSignature.asmMethod.name, jvmSignature.asmMethod.descriptor, null, null)
 
-        FunctionCodegen.generateMethodAnnotations(scriptDescriptor.unsubstitutedPrimaryConstructor, asmMethod, mv, this, typeMapper)
+        FunctionCodegen.generateMethodAnnotations(scriptDescriptor.unsubstitutedPrimaryConstructor, asmMethod, mv, this, state)
 
         if (state.classBuilderMode.generateBodies) {
             mv.visitCode()
