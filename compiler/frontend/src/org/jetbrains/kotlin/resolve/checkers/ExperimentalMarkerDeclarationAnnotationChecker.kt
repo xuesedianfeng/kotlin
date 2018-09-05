@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.resolve.checkers
 
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
+import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.descriptors.annotations.KotlinTarget
 import org.jetbrains.kotlin.diagnostics.Errors
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
@@ -17,7 +18,9 @@ import org.jetbrains.kotlin.resolve.BindingTrace
 import org.jetbrains.kotlin.resolve.constants.ArrayValue
 import org.jetbrains.kotlin.resolve.constants.ConstantValue
 import org.jetbrains.kotlin.resolve.constants.KClassValue
+import org.jetbrains.kotlin.resolve.descriptorUtil.annotationClass
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
+import org.jetbrains.kotlin.resolve.descriptorUtil.module
 
 object ExperimentalMarkerDeclarationAnnotationChecker : AdditionalAnnotationChecker {
     private val WRONG_TARGETS_FOR_MARKER = setOf(KotlinTarget.EXPRESSION, KotlinTarget.FILE)
@@ -27,11 +30,15 @@ object ExperimentalMarkerDeclarationAnnotationChecker : AdditionalAnnotationChec
 
         for (entry in entries) {
             val annotation = trace.bindingContext.get(BindingContext.ANNOTATION, entry)
-            when (annotation?.fqName) {
+
+            // TODO: inject module into this checker
+            val module = annotation?.annotationClass?.module ?: continue
+
+            when (annotation.fqName) {
                 ExperimentalUsageChecker.USE_EXPERIMENTAL_FQ_NAME -> {
                     val annotationClasses =
                         (annotation.allValueArguments[ExperimentalUsageChecker.USE_EXPERIMENTAL_ANNOTATION_CLASS] as? ArrayValue)?.value.orEmpty()
-                    checkUseExperimentalUsage(annotationClasses, trace, entry)
+                    checkUseExperimentalUsage(annotationClasses, trace, entry, module)
                 }
                 ExperimentalUsageChecker.EXPERIMENTAL_FQ_NAME -> {
                     isAnnotatedWithExperimental = true
@@ -44,7 +51,9 @@ object ExperimentalMarkerDeclarationAnnotationChecker : AdditionalAnnotationChec
         }
     }
 
-    private fun checkUseExperimentalUsage(annotationClasses: List<ConstantValue<*>>, trace: BindingTrace, entry: KtAnnotationEntry) {
+    private fun checkUseExperimentalUsage(
+        annotationClasses: List<ConstantValue<*>>, trace: BindingTrace, entry: KtAnnotationEntry, module: ModuleDescriptor
+    ) {
         if (annotationClasses.isEmpty()) {
             trace.report(Errors.USE_EXPERIMENTAL_WITHOUT_ARGUMENTS.on(entry))
             return
@@ -52,7 +61,8 @@ object ExperimentalMarkerDeclarationAnnotationChecker : AdditionalAnnotationChec
 
         for (annotationClass in annotationClasses) {
             val classDescriptor =
-                (annotationClass as? KClassValue)?.value?.constructor?.declarationDescriptor as? ClassDescriptor ?: continue
+                (annotationClass as? KClassValue)?.getArgumentType(module)?.constructor?.declarationDescriptor as? ClassDescriptor
+                    ?: continue
             val experimentality = with(ExperimentalUsageChecker) {
                 classDescriptor.loadExperimentalityForMarkerAnnotation()
             }

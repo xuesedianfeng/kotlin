@@ -47,6 +47,7 @@ import org.jetbrains.kotlin.resolve.calls.util.UnderscoreUtilKt;
 import org.jetbrains.kotlin.resolve.constants.ArrayValue;
 import org.jetbrains.kotlin.resolve.constants.ConstantValue;
 import org.jetbrains.kotlin.resolve.constants.KClassValue;
+import org.jetbrains.kotlin.resolve.descriptorUtil.DescriptorUtilsKt;
 import org.jetbrains.kotlin.resolve.inline.InlineUtil;
 import org.jetbrains.kotlin.resolve.jvm.AsmTypes;
 import org.jetbrains.kotlin.resolve.jvm.RuntimeAssertionInfo;
@@ -1134,7 +1135,7 @@ public class FunctionCodegen {
     }
 
     @NotNull
-    public static String[] getThrownExceptions(@NotNull FunctionDescriptor function, @NotNull KotlinTypeMapper mapper) {
+    public static String[] getThrownExceptions(@NotNull FunctionDescriptor function, @NotNull KotlinTypeMapper typeMapper) {
         AnnotationDescriptor annotation = function.getAnnotations().findAnnotation(new FqName("kotlin.throws"));
         if (annotation == null) {
             annotation = function.getAnnotations().findAnnotation(new FqName("kotlin.jvm.Throws"));
@@ -1153,9 +1154,10 @@ public class FunctionCodegen {
                 arrayValue.getValue(),
                 (ConstantValue<?> constant) -> {
                     if (constant instanceof KClassValue) {
-                        KClassValue classValue = (KClassValue) constant;
-                        ClassDescriptor classDescriptor = DescriptorUtils.getClassDescriptorForType(classValue.getValue());
-                        return mapper.mapClass(classDescriptor).getInternalName();
+                        ClassDescriptor classDescriptor = DescriptorUtils.getClassDescriptorForType(
+                                ((KClassValue) constant).getArgumentType(DescriptorUtilsKt.getModule(function))
+                        );
+                        return typeMapper.mapClass(classDescriptor).getInternalName();
                     }
                     return null;
                 }

@@ -22,6 +22,7 @@ import org.jetbrains.kotlin.resolve.constants.ConstantValue
 import org.jetbrains.kotlin.resolve.constants.KClassValue
 import org.jetbrains.kotlin.resolve.descriptorUtil.annotationClass
 import org.jetbrains.kotlin.resolve.descriptorUtil.declaresOrInheritsDefaultValue
+import org.jetbrains.kotlin.resolve.descriptorUtil.module
 import org.jetbrains.kotlin.types.*
 import org.jetbrains.kotlin.types.ErrorUtils.UninferredParameterTypeConstructor
 import org.jetbrains.kotlin.types.TypeUtils.CANT_INFER_FUNCTION_PARAM_TYPE
@@ -426,8 +427,10 @@ internal class DescriptorRendererImpl(
             val annotationType = annotation.type
             append(renderType(annotationType))
 
+            // TODO: pass module when constructing DescriptorRendererImpl
+            val module = annotationType.constructor.declarationDescriptor!!.module
             if (includeAnnotationArguments) {
-                val arguments = renderAndSortAnnotationArguments(annotation)
+                val arguments = renderAndSortAnnotationArguments(annotation, module)
                 if (includeEmptyAnnotationArguments || arguments.isNotEmpty()) {
                     arguments.joinTo(this, ", ", "(", ")")
                 }
@@ -439,7 +442,7 @@ internal class DescriptorRendererImpl(
         }
     }
 
-    private fun renderAndSortAnnotationArguments(descriptor: AnnotationDescriptor): List<String> {
+    private fun renderAndSortAnnotationArguments(descriptor: AnnotationDescriptor, module: ModuleDescriptor): List<String> {
         val allValueArguments = descriptor.allValueArguments
         val classDescriptor = if (renderDefaultAnnotationArguments) descriptor.annotationClass else null
         val parameterDescriptorsWithDefaultValue = classDescriptor?.unsubstitutedPrimaryConstructor?.valueParameters
@@ -449,16 +452,16 @@ internal class DescriptorRendererImpl(
         val defaultList = parameterDescriptorsWithDefaultValue.filter { it !in allValueArguments }.map { "${it.asString()} = ..." }
         val argumentList = allValueArguments.entries
                 .map { (name, value) ->
-                    "${name.asString()} = ${if (name !in parameterDescriptorsWithDefaultValue) renderConstant(value) else "..."}"
+                    "${name.asString()} = ${if (name !in parameterDescriptorsWithDefaultValue) renderConstant(value, module) else "..."}"
                 }
         return (defaultList + argumentList).sorted()
     }
 
-    private fun renderConstant(value: ConstantValue<*>): String {
+    private fun renderConstant(value: ConstantValue<*>, module: ModuleDescriptor): String {
         return when (value) {
-            is ArrayValue -> value.value.joinToString(", ", "{", "}") { renderConstant(it) }
+            is ArrayValue -> value.value.joinToString(", ", "{", "}") { renderConstant(it, module) }
             is AnnotationValue -> renderAnnotation(value.value).removePrefix("@")
-            is KClassValue -> renderType(value.value) + "::class"
+            is KClassValue -> renderType(value.getArgumentType(module)) + "::class"
             else -> value.toString()
         }
     }
@@ -844,7 +847,7 @@ internal class DescriptorRendererImpl(
     private fun renderInitializer(variable: VariableDescriptor, builder: StringBuilder) {
         if (includePropertyConstant) {
             variable.compileTimeInitializer?.let { constant ->
-                builder.append(" = ").append(escape(renderConstant(constant)))
+                builder.append(" = ").append(escape(renderConstant(constant, variable.module)))
             }
         }
     }

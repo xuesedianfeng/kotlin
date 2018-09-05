@@ -28,6 +28,7 @@ import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.metadata.deserialization.*
 import org.jetbrains.kotlin.metadata.jvm.JvmProtoBuf
 import org.jetbrains.kotlin.metadata.jvm.deserialization.JvmProtoBufUtil
+import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.protobuf.MessageLite
 import org.jetbrains.kotlin.resolve.DescriptorUtils
@@ -71,7 +72,10 @@ internal fun ClassDescriptor.toJavaClass(): Class<*>? {
     }
 }
 
-internal fun loadClass(classLoader: ClassLoader, packageName: String, className: String): Class<*>? {
+internal fun loadClass(classLoader: ClassLoader, classId: ClassId, arrayDimensions: Int = 0): Class<*>? =
+    loadClass(classLoader, classId.packageFqName.asString(), classId.relativeClassName.asString())
+
+internal fun loadClass(classLoader: ClassLoader, packageName: String, className: String, arrayDimensions: Int = 0): Class<*>? {
     if (packageName == "kotlin") {
         // See mapBuiltInType() in typeSignatureMapping.kt
         when (className) {
@@ -87,7 +91,12 @@ internal fun loadClass(classLoader: ClassLoader, packageName: String, className:
         }
     }
 
-    return classLoader.tryLoadClass("$packageName.${className.replace('.', '$')}")
+    var fqName = "$packageName.${className.replace('.', '$')}"
+    repeat(arrayDimensions) {
+        fqName = "[$fqName"
+    }
+
+    return classLoader.tryLoadClass(fqName)
 }
 
 internal fun Visibility.toKVisibility(): KVisibility? =
@@ -127,12 +136,15 @@ private fun ConstantValue<*>.toRuntimeValue(classLoader: ClassLoader): Any? = wh
     is ArrayValue -> value.map { it.toRuntimeValue(classLoader) }.toTypedArray()
     is EnumValue -> {
         val (enumClassId, entryName) = value
-        loadClass(classLoader, enumClassId.packageFqName.asString(), enumClassId.relativeClassName.asString())?.let { enumClass ->
+        loadClass(classLoader, enumClassId)?.let { enumClass ->
             @Suppress("UNCHECKED_CAST")
             Util.getEnumConstantByName(enumClass as Class<out Enum<*>>, entryName.asString())
         }
     }
-    is KClassValue -> (value.constructor.declarationDescriptor as? ClassDescriptor)?.toJavaClass()
+    is KClassValue -> {
+        val (classId, arrayDimensions) = value
+        loadClass(classLoader, classId, arrayDimensions)
+    }
     is ErrorValue, is NullValue -> null
     else -> value  // Primitives and strings
 }
