@@ -5,15 +5,12 @@
 
 package org.jetbrains.kotlin.ide.konan
 
-import com.intellij.openapi.module.Module
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.libraries.PersistentLibraryKind
 import com.intellij.openapi.vfs.VirtualFile
 import org.jetbrains.konan.KONAN_CURRENT_ABI_VERSION
 import org.jetbrains.kotlin.builtins.DefaultBuiltIns
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.caches.resolve.IdePlatformKindResolution
-import org.jetbrains.kotlin.config.KotlinFacetSettingsProvider
 import org.jetbrains.kotlin.config.LanguageVersionSettingsImpl
 import org.jetbrains.kotlin.context.ProjectContext
 import org.jetbrains.kotlin.ide.konan.analyzer.NativeAnalyzerFacade
@@ -23,7 +20,7 @@ import org.jetbrains.kotlin.idea.caches.resolve.PlatformAnalysisSettings
 import org.jetbrains.kotlin.konan.file.File
 import org.jetbrains.kotlin.konan.library.KONAN_STDLIB_NAME
 import org.jetbrains.kotlin.konan.library.createKonanLibrary
-import org.jetbrains.kotlin.konan.utils.KonanFactories.DefaultDeserializedDescriptorFactory
+import org.jetbrains.kotlin.konan.util.KonanFactories.DefaultDeserializedDescriptorFactory
 import org.jetbrains.kotlin.resolve.konan.platform.KonanPlatform
 
 class NativePlatformKindResolution : IdePlatformKindResolution {
@@ -39,17 +36,10 @@ class NativePlatformKindResolution : IdePlatformKindResolution {
 
     override val resolverForModuleFactory get() = NativeAnalyzerFacade
 
-    override fun isModuleForPlatform(module: Module) = module.isKotlinNativeModule
-
     override fun createBuiltIns(settings: PlatformAnalysisSettings, projectContext: ProjectContext) =
         createKotlinNativeBuiltIns(projectContext)
 }
 
-val Module.isKotlinNativeModule: Boolean
-    get() {
-        val settings = KotlinFacetSettingsProvider.getInstance(project).getInitializedSettings(this)
-        return settings.platformKind.isKotlinNative
-    }
 
 private fun createKotlinNativeBuiltIns(projectContext: ProjectContext): KotlinBuiltIns {
 
