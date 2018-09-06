@@ -9,8 +9,6 @@ plugins {
 jvmTarget = "1.6"
 
 dependencies {
-//    val compileOnly by configurations
-//    val runtime by configurations
     compileOnly(intellijCoreDep()) { includeJars("intellij-core") }
     compileOnly(intellijDep())
     excludeInAndroidStudio(rootProject) { compileOnly(intellijPluginDep("maven")) }
