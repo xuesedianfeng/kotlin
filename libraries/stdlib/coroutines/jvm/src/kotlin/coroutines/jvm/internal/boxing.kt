@@ -19,30 +19,31 @@ private val USE_VALUE_OF = false
  */
 
 @SinceKotlin("1.3")
-internal fun boxShort(prim: Short): java.lang.Short =
-    if (USE_VALUE_OF) java.lang.Short.valueOf(prim) as java.lang.Short
-    else java.lang.Short(prim)
+internal fun boxShort(primitive: Short): java.lang.Short =
+    if (USE_VALUE_OF) java.lang.Short.valueOf(primitive) as java.lang.Short
+    else java.lang.Short(primitive)
 
 @SinceKotlin("1.3")
-internal fun boxInt(prim: Int): java.lang.Integer =
-    if (USE_VALUE_OF) java.lang.Integer.valueOf(prim) as java.lang.Integer
-    else java.lang.Integer(prim)
-
-internal fun boxLong(prim: Long): java.lang.Long =
-    if (USE_VALUE_OF) java.lang.Long.valueOf(prim) as java.lang.Long
-    else java.lang.Long(prim)
+internal fun boxInt(primitive: Int): java.lang.Integer =
+    if (USE_VALUE_OF) java.lang.Integer.valueOf(primitive) as java.lang.Integer
+    else java.lang.Integer(primitive)
 
 @SinceKotlin("1.3")
-internal fun boxFloat(prim: Float): java.lang.Float =
-    if (USE_VALUE_OF) java.lang.Float.valueOf(prim) as java.lang.Float
-    else java.lang.Float(prim)
+internal fun boxLong(primitive: Long): java.lang.Long =
+    if (USE_VALUE_OF) java.lang.Long.valueOf(primitive) as java.lang.Long
+    else java.lang.Long(primitive)
 
 @SinceKotlin("1.3")
-internal fun boxDouble(prim: Double): java.lang.Double =
-    if (USE_VALUE_OF) java.lang.Double.valueOf(prim) as java.lang.Double
-    else java.lang.Double(prim)
+internal fun boxFloat(primitive: Float): java.lang.Float =
+    if (USE_VALUE_OF) java.lang.Float.valueOf(primitive) as java.lang.Float
+    else java.lang.Float(primitive)
 
 @SinceKotlin("1.3")
-internal fun boxChar(prim: Char): java.lang.Character =
-    if (USE_VALUE_OF) java.lang.Character.valueOf(prim) as java.lang.Character
-    else java.lang.Character(prim)
+internal fun boxDouble(primitive: Double): java.lang.Double =
+    if (USE_VALUE_OF) java.lang.Double.valueOf(primitive) as java.lang.Double
+    else java.lang.Double(primitive)
+
+@SinceKotlin("1.3")
+internal fun boxChar(primitive: Char): java.lang.Character =
+    if (USE_VALUE_OF) java.lang.Character.valueOf(primitive) as java.lang.Character
+    else java.lang.Character(primitive)
