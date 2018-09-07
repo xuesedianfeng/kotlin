@@ -21,7 +21,7 @@ import org.jetbrains.kotlin.psi.KtNamedDeclaration
 import org.jetbrains.kotlin.resolve.TargetPlatform
 import javax.swing.Icon
 
-class NativeIdePlatformKindTooling : IdePlatformKindTooling {
+class NativeIdePlatformKindTooling : IdePlatformKindTooling() {
 
     override val kind = NativeIdePlatformKind
 
