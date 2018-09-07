@@ -49,14 +49,10 @@ internal fun boxLong(primitive: Long): java.lang.Long =
     else java.lang.Long(primitive)
 
 @SinceKotlin("1.3")
-internal fun boxFloat(primitive: Float): java.lang.Float =
-    if (USE_VALUE_OF) java.lang.Float.valueOf(primitive) as java.lang.Float
-    else java.lang.Float(primitive)
+internal fun boxFloat(primitive: Float): java.lang.Float = java.lang.Float(primitive)
 
 @SinceKotlin("1.3")
-internal fun boxDouble(primitive: Double): java.lang.Double =
-    if (USE_VALUE_OF) java.lang.Double.valueOf(primitive) as java.lang.Double
-    else java.lang.Double(primitive)
+internal fun boxDouble(primitive: Double): java.lang.Double = java.lang.Double(primitive)
 
 @SinceKotlin("1.3")
 internal fun boxChar(primitive: Char): java.lang.Character =
