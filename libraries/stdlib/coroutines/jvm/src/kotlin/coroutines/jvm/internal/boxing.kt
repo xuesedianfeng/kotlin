@@ -9,14 +9,29 @@
 
 package kotlin.coroutines.jvm.internal
 
+/*
+ * A flag to switch between boxing strategies for coroutines. We use two different strategies for boxing primitives in coroutine code:
+ * 1) Use standard [valueOf] method.
+ * 2) Allocate primitive wrapper object every time.
+ *
+ * The latter is default.
+ *
+ * This is a static final boolean field for HotSpot to optimize it away.
+ */
 private val USE_VALUE_OF = false
 
 /*
- * Box primitive to Java wrapper class, using either default [valueOf] method or by allocating the wrapper object.
+ * Box primitive to Java wrapper class, using either standard [valueOf] method or by allocating the wrapper object, depending on value of
+ * [USE_VALUE_OF] flag.
  *
  * The latter allows HotSpot JIT to eliminate allocations completely in coroutines code with primitives.
- * Byte and Boolean versions are missing, since their [valueOf] methods return cached objects without allocating them.
  */
+
+@SinceKotlin("1.3")
+internal fun boxBoolean(primitive: Boolean): java.lang.Boolean = java.lang.Boolean.valueOf(primitive) as java.lang.Boolean
+
+@SinceKotlin("1.3")
+internal fun boxByte(primitive: Byte): java.lang.Byte = java.lang.Byte.valueOf(primitive) as java.lang.Byte
 
 @SinceKotlin("1.3")
 internal fun boxShort(primitive: Short): java.lang.Short =

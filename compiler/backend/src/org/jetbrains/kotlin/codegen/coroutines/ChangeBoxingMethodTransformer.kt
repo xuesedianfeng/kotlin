@@ -21,16 +21,11 @@ private val BOXING_CLASS_INTERNAL_NAME =
 
 object ChangeBoxingMethodTransformer : MethodTransformer() {
     private val wrapperToInternalBoxing: Map<String, String>
-    private val ignoredWrapperNames = listOf(
-        JvmPrimitiveType.BOOLEAN.wrapperFqName.topLevelClassInternalName(),
-        JvmPrimitiveType.BYTE.wrapperFqName.topLevelClassInternalName()
-    )
 
     init {
         val map = hashMapOf<String, String>()
         for (primitiveType in JvmPrimitiveType.values()) {
             val name = primitiveType.wrapperFqName.topLevelClassInternalName()
-            if (name in ignoredWrapperNames) continue
             map[name] = "box${primitiveType.javaKeywordName.capitalize()}"
         }
         wrapperToInternalBoxing = map
@@ -42,7 +37,6 @@ object ChangeBoxingMethodTransformer : MethodTransformer() {
                 "boxing shall be INVOKESTATIC wrapper.indexOf"
             }
             boxing as MethodInsnNode
-            if (boxing.owner in ignoredWrapperNames) continue
             val methodName = wrapperToInternalBoxing[boxing.owner].sure {
                 "expected primitive wrapper, but got ${boxing.owner}"
             }
