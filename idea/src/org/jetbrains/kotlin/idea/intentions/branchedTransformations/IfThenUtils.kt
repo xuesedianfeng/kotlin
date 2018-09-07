@@ -106,6 +106,12 @@ fun KtThrowExpression.throwsNullPointerExceptionWithNoArguments(): Boolean {
 fun KtExpression.evaluatesTo(other: KtExpression): Boolean =
     this.unwrapBlockOrParenthesis().text == other.text
 
+fun KtExpression.anyArgumentEvaluatesTo(argument: KtExpression): Boolean {
+    val callExpression = this as? KtCallExpression ?: return false
+    val arguments = callExpression.valueArguments.map { it.getArgumentExpression() }
+    return arguments.any { it?.evaluatesTo(argument) == true } && arguments.all { it is KtNameReferenceExpression }
+}
+
 fun KtExpression.convertToIfNotNullExpression(
     conditionLhs: KtExpression,
     thenClause: KtExpression,
@@ -235,7 +241,7 @@ data class IfThenToSelectData(
         return resolvedCall.getImplicitReceiverValue()
     }
 
-    internal fun hasImplicitReceiver(): Boolean = getImplicitReceiver() != null
+    internal fun hasImplicitReceiver(): Boolean = receiverExpression is KtThisExpression && getImplicitReceiver() != null
 
     private fun replacedBaseClauseWithLet(baseClause: KtCallExpression, receiver: KtExpression, factory: KtPsiFactory): KtExpression {
         val needExplicitParameter = baseClause.valueArguments.any { it.getArgumentExpression()?.text == "it" }
@@ -295,15 +301,15 @@ internal fun KtIfExpression.buildSelectTransformationData(): IfThenToSelectData?
     return IfThenToSelectData(context, condition, receiverExpression, baseClause, negatedClause)
 }
 
-internal fun KtExpression?.isClauseTransformableToLetOnly() =
-    this is KtCallExpression && resolveToCall()?.getImplicitReceiverValue() == null
+internal fun KtExpression?.isClauseTransformableToLetOnly(receiver: KtExpression?) =
+    this is KtCallExpression && (resolveToCall()?.getImplicitReceiverValue() == null || receiver !is KtThisExpression)
 
 internal fun KtIfExpression.shouldBeTransformed(): Boolean {
     val condition = condition
     return when (condition) {
         is KtBinaryExpression -> {
             val baseClause = (if (condition.operationToken == KtTokens.EQEQ) `else` else then)?.unwrapBlockOrParenthesis()
-            !baseClause.isClauseTransformableToLetOnly()
+            !baseClause.isClauseTransformableToLetOnly(checkedExpression())
         }
         else -> false
     }
