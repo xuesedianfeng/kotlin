@@ -210,7 +210,7 @@ class JvmDeclarationFactory(
                 interfaceFun.descriptor.original,
                 interfaceFun.parentAsClass.descriptor,
                 state.typeMapper
-            ).createFunctionAndMapVariables(interfaceFun, origin = JvmLoweredDeclarationOrigin.DEFAULT_IMPLS)
+            ).createFunctionAndMapVariables(interfaceFun, defaultImpls, origin = JvmLoweredDeclarationOrigin.DEFAULT_IMPLS)
         }
     }
 
@@ -219,7 +219,9 @@ class JvmDeclarationFactory(
             IrClassImpl(
                 interfaceClass.startOffset, interfaceClass.endOffset, JvmLoweredDeclarationOrigin.DEFAULT_IMPLS,
                 createDefaultImplsClassDescriptor(interfaceClass.descriptor)
-            )
+            ).also {
+                it.parent = interfaceClass
+            }
         }
 
     companion object {

@@ -15,10 +15,7 @@ import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.annotations.Annotations
 import org.jetbrains.kotlin.descriptors.impl.SimpleFunctionDescriptorImpl
 import org.jetbrains.kotlin.descriptors.impl.ValueParameterDescriptorImpl
-import org.jetbrains.kotlin.ir.declarations.IrClass
-import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
-import org.jetbrains.kotlin.ir.declarations.IrFunction
-import org.jetbrains.kotlin.ir.declarations.IrValueParameter
+import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.symbols.impl.IrSimpleFunctionSymbolImpl
 import org.jetbrains.kotlin.ir.util.createParameterDeclarations
@@ -111,6 +108,7 @@ internal fun createStaticFunctionWithReceivers(
 
 internal fun FunctionDescriptor.createFunctionAndMapVariables(
     oldFunction: IrFunction,
+    parentClass: IrDeclarationParent,
     visibility: Visibility = oldFunction.visibility,
     origin: IrDeclarationOrigin = oldFunction.origin
 ) =
@@ -118,10 +116,11 @@ internal fun FunctionDescriptor.createFunctionAndMapVariables(
         oldFunction.startOffset, oldFunction.endOffset, origin, IrSimpleFunctionSymbolImpl(this),
         visibility = visibility
     ).apply {
+        parent = parentClass
         body = oldFunction.body
         returnType = oldFunction.returnType
         createParameterDeclarations()
-        // TODO: do we really need descriptor here? This workaround is about coping `dispatchReceiver` descriptor
+        // TODO: do we really need descriptor here? This workaround is about copying `dispatchReceiver` descriptor
         val mapping: Map<ValueDescriptor, IrValueParameter> =
             (listOfNotNull(oldFunction.dispatchReceiverParameter!!.descriptor, oldFunction.extensionReceiverParameter?.descriptor) + oldFunction.valueParameters.map { it.descriptor })
                 .zip(valueParameters).toMap()
