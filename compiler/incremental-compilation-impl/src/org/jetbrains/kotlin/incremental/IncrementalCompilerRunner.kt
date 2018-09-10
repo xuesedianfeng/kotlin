@@ -196,6 +196,10 @@ abstract class IncrementalCompilerRunner<
         val buildDirtyFqNames = HashSet<FqName>()
         val allSourcesToCompile = HashSet<File>()
 
+        val allKotlinSourcesSet =
+            if (compilationMode is CompilationMode.Rebuild) null
+            else allKotlinSources.mapTo(hashSetOf()) { it.canonicalFile }
+
         var exitCode = ExitCode.OK
 
         while (dirtySources.any() || runWithNoDirtyKotlinSources(caches)) {
@@ -220,7 +224,11 @@ abstract class IncrementalCompilerRunner<
             val outputItemsCollector = OutputItemsCollectorImpl()
             val messageCollectorAdapter = MessageCollectorToOutputItemsCollectorAdapter(messageCollector, outputItemsCollector)
 
-            exitCode = runCompiler(sourcesToCompile.toSet(), args, caches, services, messageCollectorAdapter)
+            val filteredSourcesToCompile =
+                if (allKotlinSourcesSet == null) sourcesToCompile
+                else sourcesToCompile.filter { it.canonicalFile in allKotlinSourcesSet }
+
+            exitCode = runCompiler(filteredSourcesToCompile.toSet(), args, caches, services, messageCollectorAdapter)
             postCompilationHook(exitCode)
 
             if (exitCode != ExitCode.OK) break
