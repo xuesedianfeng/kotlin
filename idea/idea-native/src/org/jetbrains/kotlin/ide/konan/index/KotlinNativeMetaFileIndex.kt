@@ -20,7 +20,7 @@ object KotlinNativeMetaFileIndex : KotlinFileIndexBase<KotlinNativeMetaFileIndex
     override fun getVersion() = VERSION
 
     // This is to express intention to index all Kotlin/Native metadata files irrespectively to file size:
-    override fun getFileTypesWithSizeLimitNotApplicable() = listOf(KotlinNativeMetaFileType)
+//    override fun getFileTypesWithSizeLimitNotApplicable() = listOf(KotlinNativeMetaFileType)
 
     private const val VERSION = 4
 
