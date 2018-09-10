@@ -62,7 +62,6 @@ enum class LanguageFeature(
     ProhibitDataClassesOverridingCopy(KOTLIN_1_3, kind = BUG_FIX),
     RestrictionOfWrongAnnotationsWithUseSiteTargetsOnTypes(KOTLIN_1_3, kind = BUG_FIX),
     ProhibitInnerClassesOfGenericClassExtendingThrowable(KOTLIN_1_3, kind = BUG_FIX),
-    ProperVisibilityForCompanionObjectInstanceField(KOTLIN_1_3, kind = BUG_FIX),
     ProperForInArrayLoopRangeVariableAssignmentSemantic(KOTLIN_1_3, kind = BUG_FIX),
     NestedClassesInAnnotations(KOTLIN_1_3),
     JvmStaticInInterface(KOTLIN_1_3, kind = UNSTABLE_FEATURE),
@@ -81,7 +80,6 @@ enum class LanguageFeature(
     ProhibitAssigningSingleElementsToVarargsInNamedForm(KOTLIN_1_3, kind = BUG_FIX),
     FunctionTypesWithBigArity(KOTLIN_1_3, sinceApiVersion = ApiVersion.KOTLIN_1_3),
     RestrictRetentionForExpressionAnnotations(KOTLIN_1_3, kind = BUG_FIX),
-    NoConstantValueAttributeForNonConstVals(KOTLIN_1_3, kind = BUG_FIX),
     NormalizeConstructorCalls(KOTLIN_1_3),
     StrictJavaNullabilityAssertions(KOTLIN_1_3, kind = BUG_FIX),
     SoundSmartcastForEnumEntries(KOTLIN_1_3, kind = BUG_FIX),
@@ -90,6 +88,9 @@ enum class LanguageFeature(
     ProhibitErroneousExpressionsInAnnotationsWithUseSiteTargets(KOTLIN_1_3, kind = BUG_FIX),
 
     RestrictReturnStatementTarget(KOTLIN_1_4, kind = BUG_FIX),
+    ProperVisibilityForCompanionObjectInstanceField(KOTLIN_1_4, kind = BUG_FIX),
+    NoConstantValueAttributeForNonConstVals(KOTLIN_1_4, kind = BUG_FIX),
+
     ProperIeee754Comparisons(sinceVersion = null, defaultState = State.DISABLED, kind = BUG_FIX),
 
     // Experimental features
