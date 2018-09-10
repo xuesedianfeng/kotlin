@@ -70,9 +70,11 @@ class KotlinTargetImpl(
     override val name: String,
     override val disambiguationClassifier: String?,
     override val platform: KotlinPlatform,
-    override val compilations: Collection<KotlinCompilation>,
     override val jar: KotlinTargetJar?
 ) : KotlinTarget {
+    override var compilations: Collection<KotlinCompilation> = emptyList()
+        internal set
+
     override fun toString() = name
 }
 
