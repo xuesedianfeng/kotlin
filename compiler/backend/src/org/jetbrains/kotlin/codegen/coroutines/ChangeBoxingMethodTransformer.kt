@@ -34,7 +34,7 @@ object ChangeBoxingMethodTransformer : MethodTransformer() {
     override fun transform(internalClassName: String, methodNode: MethodNode) {
         for (boxing in methodNode.instructions.asSequence().filter { it.isPrimitiveBoxing() }) {
             assert(boxing.opcode == Opcodes.INVOKESTATIC) {
-                "boxing shall be INVOKESTATIC wrapper.indexOf"
+                "boxing shall be INVOKESTATIC wrapper.valueOf"
             }
             boxing as MethodInsnNode
             val methodName = wrapperToInternalBoxing[boxing.owner].sure {
