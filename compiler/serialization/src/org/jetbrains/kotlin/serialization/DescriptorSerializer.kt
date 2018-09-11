@@ -33,6 +33,7 @@ import org.jetbrains.kotlin.resolve.constants.IntValue
 import org.jetbrains.kotlin.resolve.constants.NullValue
 import org.jetbrains.kotlin.resolve.constants.StringValue
 import org.jetbrains.kotlin.resolve.descriptorUtil.nonSourceAnnotations
+import org.jetbrains.kotlin.resolve.isInlineClassType
 import org.jetbrains.kotlin.serialization.deserialization.ProtoEnumFlags
 import org.jetbrains.kotlin.types.*
 import org.jetbrains.kotlin.types.typeUtil.contains
@@ -239,6 +240,10 @@ class DescriptorSerializer private constructor(
             builder.addVersionRequirement(writeVersionRequirementDependingOnCoroutinesVersion())
         }
 
+        if (descriptor.hasInlineClassTypesInSignature()) {
+            builder.addVersionRequirement(writeVersionRequirement(LanguageFeature.InlineClasses))
+        }
+
         extension.serializeProperty(descriptor, builder, versionRequirementTable)
 
         return builder
@@ -308,6 +313,10 @@ class DescriptorSerializer private constructor(
             builder.addVersionRequirement(writeVersionRequirementDependingOnCoroutinesVersion())
         }
 
+        if (descriptor.hasInlineClassTypesInSignature()) {
+            builder.addVersionRequirement(writeVersionRequirement(LanguageFeature.InlineClasses))
+        }
+
         contractSerializer.serializeContractOfFunctionIfAny(descriptor, builder, this)
 
         extension.serializeFunction(descriptor, builder)
@@ -337,6 +346,10 @@ class DescriptorSerializer private constructor(
             builder.addVersionRequirement(writeVersionRequirementDependingOnCoroutinesVersion())
         }
 
+        if (descriptor.hasInlineClassTypesInSignature()) {
+            builder.addVersionRequirement(writeVersionRequirement(LanguageFeature.InlineClasses))
+        }
+
         extension.serializeConstructor(descriptor, builder)
 
         return builder
@@ -348,12 +361,20 @@ class DescriptorSerializer private constructor(
     private fun CallableMemberDescriptor.isSuspendOrHasSuspendTypesInSignature(): Boolean {
         if (this is FunctionDescriptor && isSuspend) return true
 
+        return allTypesFromSignature().any { type -> type.contains(UnwrappedType::isSuspendFunctionTypeOrSubtype) }
+    }
+
+    private fun CallableMemberDescriptor.hasInlineClassTypesInSignature(): Boolean {
+        return allTypesFromSignature().any { type -> type.contains(UnwrappedType::isInlineClassType) }
+    }
+
+    private fun CallableMemberDescriptor.allTypesFromSignature(): List<KotlinType> {
         return listOfNotNull(
-                extensionReceiverParameter?.type,
-                returnType,
-                *typeParameters.flatMap { it.upperBounds }.toTypedArray(),
-                *valueParameters.map(ValueParameterDescriptor::getType).toTypedArray()
-        ).any { type -> type.contains(UnwrappedType::isSuspendFunctionTypeOrSubtype) }
+            extensionReceiverParameter?.type,
+            returnType,
+            *typeParameters.flatMap { it.upperBounds }.toTypedArray(),
+            *valueParameters.map(ValueParameterDescriptor::getType).toTypedArray()
+        )
     }
 
     fun typeAliasProto(descriptor: TypeAliasDescriptor): ProtoBuf.TypeAlias.Builder {
@@ -614,15 +635,7 @@ class DescriptorSerializer private constructor(
     }
 
     private fun writeVersionRequirement(languageFeature: LanguageFeature): Int {
-        val languageVersion = languageFeature.sinceVersion!!
-        return writeVersionRequirement(
-            languageVersion.major, languageVersion.minor, 0,
-            ProtoBuf.VersionRequirement.VersionKind.LANGUAGE_VERSION
-        )
-    }
-
-    private fun writeVersionRequirement(major: Int, minor: Int, patch: Int, versionKind: ProtoBuf.VersionRequirement.VersionKind): Int {
-        return writeVersionRequirement(major, minor, patch, versionKind, versionRequirementTable)
+        return writeLanguageVersionRequirement(languageFeature, versionRequirementTable)
     }
 
     // Returns a list of indices into versionRequirementTable, or empty list if there's no @RequireKotlin on the descriptor
@@ -757,6 +770,18 @@ class DescriptorSerializer private constructor(
                     //NOTE: the exact comparator does matter here
                     Collections.sort(this, MemberComparator.INSTANCE)
                 }
+
+        fun writeLanguageVersionRequirement(
+            languageFeature: LanguageFeature,
+            versionRequirementTable: MutableVersionRequirementTable
+        ): Int {
+            val languageVersion = languageFeature.sinceVersion!!
+            return writeVersionRequirement(
+                languageVersion.major, languageVersion.minor, 0,
+                ProtoBuf.VersionRequirement.VersionKind.LANGUAGE_VERSION,
+                versionRequirementTable
+            )
+        }
 
         fun writeVersionRequirement(
             major: Int,
