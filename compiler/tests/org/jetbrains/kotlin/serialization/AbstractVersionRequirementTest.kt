@@ -182,9 +182,10 @@ abstract class AbstractVersionRequirementTest : TestCaseWithTmpdir() {
                 "test.simpleFun",
                 "test.aliasedFun",
                 "test.simpleProp",
-                "test.result"
+                "test.result",
+                "test.Foo",
+                "test.Bar"
             )
         )
     }
-
 }

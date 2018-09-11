@@ -11,8 +11,12 @@ import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.metadata.deserialization.BinaryVersion
 import org.jetbrains.kotlin.metadata.serialization.MutableVersionRequirementTable
 import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.resolve.isInlineClassType
 import org.jetbrains.kotlin.types.FlexibleType
 import org.jetbrains.kotlin.types.KotlinType
+import org.jetbrains.kotlin.types.UnwrappedType
+import org.jetbrains.kotlin.types.typeUtil.contains
+import org.jetbrains.kotlin.types.typeUtil.immediateSupertypes
 
 abstract class SerializerExtension {
     abstract val stringTable: DescriptorAwareStringTable
@@ -82,10 +86,20 @@ abstract class SerializerExtension {
         builder: ProtoBuf.Class.Builder,
         versionRequirementTable: MutableVersionRequirementTable
     ) {
-        if (!classDescriptor.isInline) return
+        if (!classDescriptor.isInline && !classDescriptor.hasInlineClassTypesInSignature()) return
 
         builder.addVersionRequirement(
             DescriptorSerializer.writeLanguageVersionRequirement(LanguageFeature.InlineClasses, versionRequirementTable)
         )
+    }
+
+    private fun ClassDescriptor.hasInlineClassTypesInSignature(): Boolean {
+        for (typeParameter in declaredTypeParameters) {
+            if (typeParameter.upperBounds.any { it.contains(UnwrappedType::isInlineClassType) }) return true
+        }
+
+        if (defaultType.immediateSupertypes().any { supertype -> supertype.contains(UnwrappedType::isInlineClassType) }) return true
+
+        return false
     }
 }
