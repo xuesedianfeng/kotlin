@@ -560,15 +560,6 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
         )
     }
 
-    fun testUseInlineClassTypesInCompatibilityMode() {
-        compileKotlin(
-            "source.kt",
-            tmpdir,
-            listOf(compileLibrary("library", checkKotlinOutput = { })),
-            additionalOptions = listOf("-language-version", "1.2", "-api-version", "1.2")
-        )
-    }
-
     companion object {
         // compiler before 1.1.4 version  did not include suspension marks into bytecode.
         private fun stripSuspensionMarksToImitateLegacyCompiler(bytes: ByteArray): Pair<ByteArray, Int> {
