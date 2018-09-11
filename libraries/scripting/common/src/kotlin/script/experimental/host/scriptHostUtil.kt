@@ -9,6 +9,7 @@ import java.io.File
 import java.net.URL
 import kotlin.script.experimental.api.*
 
+// helper function
 fun getMergedScriptText(script: SourceCode, configuration: ScriptCompilationConfiguration?): String {
     val originalScriptText = script.text
     val sourceFragments = configuration?.get(ScriptCompilationConfiguration.sourceFragments)
@@ -38,15 +39,27 @@ fun getMergedScriptText(script: SourceCode, configuration: ScriptCompilationConf
     }
 }
 
+/**
+ * An implementation of the SourceCode for a script located in a file
+ */
 open class FileScriptSource(val file: File) : ExternalSourceCode {
     override val externalLocation: URL get() = file.toURI().toURL()
     override val text: String by lazy { file.readText() }
 }
 
+/**
+ * Convert the file into the SourceCode
+ */
 fun File.toScriptSource(): SourceCode = FileScriptSource(this)
 
+/**
+ * An implementation of the ScriptSource for a script in a String
+ */
 open class StringScriptSource(val source: String) : SourceCode {
     override val text: String get() = source
 }
 
+/**
+ * Convert the String into the SourceCode
+ */
 fun String.toScriptSource(): SourceCode = StringScriptSource(this)
