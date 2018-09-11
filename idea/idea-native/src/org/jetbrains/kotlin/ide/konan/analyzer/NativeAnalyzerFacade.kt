@@ -36,13 +36,14 @@ object NativeAnalyzerFacade : ResolverForModuleFactory() {
         languageVersionSettings: LanguageVersionSettings,
         targetPlatformVersion: TargetPlatformVersion
     ): ResolverForModule {
+        val (moduleInfo, syntheticFiles, moduleContentScope) = moduleContent
 
         val declarationProviderFactory = createDeclarationProviderFactory(
             moduleContext.project,
             moduleContext.storageManager,
-            moduleContent.syntheticFiles,
-            moduleContent.moduleContentScope,
-            moduleContent.moduleInfo
+            syntheticFiles,
+            moduleContentScope,
+            moduleInfo
         )
 
         val container = createContainerForLazyResolve(
@@ -57,8 +58,6 @@ object NativeAnalyzerFacade : ResolverForModuleFactory() {
 
         val packageFragmentProvider = container.get<ResolveSession>().packageFragmentProvider
         val fragmentProviders = mutableListOf(packageFragmentProvider)
-
-        val moduleInfo = moduleContent.moduleInfo
 
         if (moduleInfo is LibraryInfo) {
             val libPackageFragmentProviders = moduleInfo.createPackageFragmentProviderForLibraryModule(
