@@ -69,6 +69,7 @@ private val KOTLIN_NATIVE_FQ_NAMES = listOf(
     "konan.native" // Keep "konan.native" for backward compatibility with older versions of Kotlin/Native.
 ).map { FqName(it) }
 
+// TODO: check me: this looks performance-consuming
 fun hasKotlinNativeMetadataFile(project: Project, scope: GlobalSearchScope): Boolean {
     return runReadAction {
         project.runWithAlternativeResolveEnabled {

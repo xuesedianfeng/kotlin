@@ -61,7 +61,7 @@ private fun createKotlinNativeBuiltIns(projectContext: ProjectContext): KotlinBu
         }
         return null
     }
-
+    // TODO: check me: this place looks performance-consuming
     val stdlib: Pair<String, LibraryInfo>? = findStdlib()
 
     if (stdlib != null) {
