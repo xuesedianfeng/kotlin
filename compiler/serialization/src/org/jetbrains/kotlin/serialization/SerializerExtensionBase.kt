@@ -35,6 +35,8 @@ abstract class KotlinSerializerExtensionBase(private val protocol: SerializerExt
         for (annotation in descriptor.nonSourceAnnotations) {
             proto.addExtension(protocol.classAnnotation, annotationSerializer.serializeAnnotation(annotation))
         }
+
+        super.serializeClass(descriptor, proto, versionRequirementTable)
     }
 
     override fun serializePackage(packageFqName: FqName, proto: ProtoBuf.Package.Builder) {

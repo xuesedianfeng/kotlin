@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.serialization
 
+import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.metadata.deserialization.BinaryVersion
@@ -36,6 +37,7 @@ abstract class SerializerExtension {
         proto: ProtoBuf.Class.Builder,
         versionRequirementTable: MutableVersionRequirementTable
     ) {
+        writeVersionRequirementForInlineClasses(descriptor, proto, versionRequirementTable)
     }
 
     open fun serializePackage(packageFqName: FqName, proto: ProtoBuf.Package.Builder) {
@@ -74,4 +76,16 @@ abstract class SerializerExtension {
     }
 
     open fun releaseCoroutines(): Boolean = false
+
+    private fun writeVersionRequirementForInlineClasses(
+        classDescriptor: ClassDescriptor,
+        builder: ProtoBuf.Class.Builder,
+        versionRequirementTable: MutableVersionRequirementTable
+    ) {
+        if (!classDescriptor.isInline) return
+
+        builder.addVersionRequirement(
+            DescriptorSerializer.writeLanguageVersionRequirement(LanguageFeature.InlineClasses, versionRequirementTable)
+        )
+    }
 }

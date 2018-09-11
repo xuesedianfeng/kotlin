@@ -62,7 +62,8 @@ class JvmSerializerExtension(private val bindings: JvmSerializationBindings, sta
             if (DescriptorUtils.isInterface(descriptor)) typeMapper.mapDefaultImpls(descriptor) else typeMapper.mapClass(descriptor)
         writeLocalProperties(proto, containerAsmType, JvmProtoBuf.classLocalVariable)
         writeVersionRequirementForJvmDefaultIfNeeded(descriptor, proto, versionRequirementTable)
-        writeVersionRequirementForInlineClasses(descriptor, proto, versionRequirementTable)
+
+        super.serializeClass(descriptor, proto, versionRequirementTable)
     }
 
     // Interfaces which have @JvmDefault members somewhere in the hierarchy need the compiler 1.2.40+
@@ -82,18 +83,6 @@ class JvmSerializerExtension(private val bindings: JvmSerializationBindings, sta
                 writeVersionRequirement(1, 2, 40, ProtoBuf.VersionRequirement.VersionKind.COMPILER_VERSION, versionRequirementTable)
             )
         }
-    }
-
-    private fun writeVersionRequirementForInlineClasses(
-        classDescriptor: ClassDescriptor,
-        builder: ProtoBuf.Class.Builder,
-        versionRequirementTable: MutableVersionRequirementTable
-    ) {
-        if (!classDescriptor.isInline) return
-
-        builder.addVersionRequirement(
-            writeLanguageVersionRequirement(LanguageFeature.InlineClasses, versionRequirementTable)
-        )
     }
 
     override fun serializePackage(packageFqName: FqName, proto: ProtoBuf.Package.Builder) {
