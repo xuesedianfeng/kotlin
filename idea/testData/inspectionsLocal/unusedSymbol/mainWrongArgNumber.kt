@@ -1,0 +1,1 @@
+fun <caret>main(args: Array<String>, other: Int) = args.hashCode() + other

@@ -35,6 +35,7 @@ import org.jetbrains.kotlin.asJava.LightClassUtil
 import org.jetbrains.kotlin.asJava.classes.KtLightClass
 import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.asJava.toLightMethods
+import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.config.AnalysisFlag
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.idea.caches.project.implementingDescriptors
@@ -80,11 +81,34 @@ class UnusedSymbolInspection : AbstractKotlinInspection() {
 
         private val KOTLIN_ADDITIONAL_ANNOTATIONS = listOf("kotlin.test.*")
 
+        private const val KOTLIN_MAIN = "main"
+
         private fun KtDeclaration.hasKotlinAdditionalAnnotation() =
             this is KtNamedDeclaration && checkAnnotatedUsingPatterns(this, KOTLIN_ADDITIONAL_ANNOTATIONS)
 
+        private fun KtDeclaration.isKotlinMain() =
+            this is KtNamedFunction && this.isTopLevel && this.name == KOTLIN_MAIN && run {
+                val descriptor = (this as KtNamedFunction).resolveToDescriptorIfAny()
+                when {
+                    descriptor == null -> false
+                    descriptor.valueParameters.size != 1 -> false
+                    descriptor.visibility != Visibilities.PUBLIC -> false
+                    else -> {
+                        val parameterType = descriptor.valueParameters.single().type
+                        when {
+                            !KotlinBuiltIns.isArray(parameterType) -> false
+                            else -> {
+                                val typeArg = parameterType.arguments.singleOrNull()?.type
+                                typeArg != null && KotlinBuiltIns.isString(typeArg)
+                            }
+                        }
+                    }
+                }
+            }
+
         fun isEntryPoint(declaration: KtNamedDeclaration): Boolean {
             if (declaration.hasKotlinAdditionalAnnotation()) return true
+            if (declaration.isKotlinMain()) return true
             if (declaration is KtClass && declaration.declarations.any { it.hasKotlinAdditionalAnnotation() }) return true
             val lightElement: PsiElement? = when (declaration) {
                 is KtClassOrObject -> declaration.toLightClass()
@@ -411,10 +435,16 @@ class SafeDeleteFix(declaration: KtDeclaration) : LocalQuickFix {
         if (declaration is KtParameter && declaration.parent is KtParameterList && declaration.parent?.parent is KtFunction) {
             RemoveUnusedFunctionParameterFix(declaration).invoke(project, declaration.findExistingEditor(), declaration.containingKtFile)
         } else {
-            ApplicationManager.getApplication().invokeLater(
-                { SafeDeleteHandler.invoke(project, arrayOf(declaration), false) },
-                ModalityState.NON_MODAL
-            )
+            fun safeDeleteIt() = SafeDeleteHandler.invoke(project, arrayOf(declaration), false)
+            val application = ApplicationManager.getApplication()
+            if (application.isUnitTestMode) {
+                safeDeleteIt()
+            } else {
+                application.invokeLater(
+                    { safeDeleteIt() },
+                    ModalityState.NON_MODAL
+                )
+            }
         }
     }
 }

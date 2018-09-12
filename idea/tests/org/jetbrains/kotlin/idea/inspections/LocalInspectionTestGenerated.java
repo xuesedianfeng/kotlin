@@ -6193,6 +6193,21 @@ public class LocalInspectionTestGenerated extends AbstractLocalInspectionTest {
             runTest("idea/testData/inspectionsLocal/unusedSymbol/internal.kt");
         }
 
+        @TestMetadata("mainNoArgs.kt")
+        public void testMainNoArgs() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedSymbol/mainNoArgs.kt");
+        }
+
+        @TestMetadata("mainWrongArg.kt")
+        public void testMainWrongArg() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedSymbol/mainWrongArg.kt");
+        }
+
+        @TestMetadata("mainWrongArgNumber.kt")
+        public void testMainWrongArgNumber() throws Exception {
+            runTest("idea/testData/inspectionsLocal/unusedSymbol/mainWrongArgNumber.kt");
+        }
+
         @TestMetadata("withJvmNameUsedFromKotlin.kt")
         public void testWithJvmNameUsedFromKotlin() throws Exception {
             runTest("idea/testData/inspectionsLocal/unusedSymbol/withJvmNameUsedFromKotlin.kt");
