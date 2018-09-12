@@ -40,7 +40,9 @@ internal abstract class KCallableImpl<out R> : KCallable<R> {
         var index = 0
 
         if (descriptor.dispatchReceiverParameter != null && !isBound) {
-            result.add(KParameterImpl(this, index++, KParameter.Kind.INSTANCE) { descriptor.dispatchReceiverParameter!! })
+            result.add(KParameterImpl(this, index++, KParameter.Kind.INSTANCE) {
+                (container as KClassImpl<*>).descriptor.thisAsReceiverParameter
+            })
         }
 
         if (descriptor.extensionReceiverParameter != null && !isBound) {

@@ -17331,6 +17331,11 @@ public class IrJsCodegenBoxTestGenerated extends AbstractIrJsCodegenBoxTest {
                 runTest("compiler/testData/codegen/box/reflection/parameters/instanceExtensionReceiverAndValueParameters.kt");
             }
 
+            @TestMetadata("instanceParameterOfFakeOverride.kt")
+            public void testInstanceParameterOfFakeOverride() throws Exception {
+                runTest("compiler/testData/codegen/box/reflection/parameters/instanceParameterOfFakeOverride.kt");
+            }
+
             @TestMetadata("isMarkedNullable.kt")
             public void testIsMarkedNullable() throws Exception {
                 runTest("compiler/testData/codegen/box/reflection/parameters/isMarkedNullable.kt");
