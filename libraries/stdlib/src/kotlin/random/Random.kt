@@ -37,9 +37,9 @@ public abstract class Random {
     public open fun nextInt(): Int = nextBits(32)
 
     /**
-     * Gets the next random non-negative `Int` from the random number generator not greater than the specified [until].
+     * Gets the next random non-negative `Int` from the random number generator not greater than the specified [until] bound.
      *
-     * Generates an `Int` random value uniformly distributed between `0` (inclusive) and the specified [until] (exclusive).
+     * Generates an `Int` random value uniformly distributed between `0` (inclusive) and the specified [until] bound (exclusive).
      *
      * @param until must be positive.
      *
@@ -50,7 +50,7 @@ public abstract class Random {
     /**
      * Gets the next random `Int` from the random number generator in the specified range.
      *
-     * Generates an `Int` random value uniformly distributed between the specified [from] (inclusive) and the specified [until] (exclusive).
+     * Generates an `Int` random value uniformly distributed between the specified [from] (inclusive) and [until] (exclusive) bounds.
      *
      * @throws IllegalArgumentException if [from] is greater than or equal to [until].
      */
@@ -101,9 +101,9 @@ public abstract class Random {
     public open fun nextLong(): Long = nextInt().toLong().shl(32) + nextInt()
 
     /**
-     * Gets the next random non-negative `Long` from the random number generator not greater than the specified [until].
+     * Gets the next random non-negative `Long` from the random number generator not greater than the specified [until] bound.
      *
-     * Generates a `Long` random value uniformly distributed between `0` (inclusive) and the specified [until] (exclusive).
+     * Generates a `Long` random value uniformly distributed between `0` (inclusive) and the specified [until] bound (exclusive).
      *
      * @param until must be positive.
      *
@@ -114,7 +114,7 @@ public abstract class Random {
     /**
      * Gets the next random `Long` from the random number generator in the specified range.
      *
-     * Generates a `Long` random value uniformly distributed between the specified [from] (inclusive) and the specified [until] (exclusive).
+     * Generates a `Long` random value uniformly distributed between the specified [from] (inclusive) and [until] (exclusive) bounds.
      *
      * @throws IllegalArgumentException if [from] is greater than or equal to [until].
      */
@@ -183,7 +183,7 @@ public abstract class Random {
     public open fun nextDouble(): Double = doubleFromParts(nextBits(26), nextBits(27))
 
     /**
-     * Gets the next random non-negative `Double` from the random number generator not greater than the specified [until].
+     * Gets the next random non-negative `Double` from the random number generator not greater than the specified [until] bound.
      *
      * Generates a `Double` random value uniformly distributed between 0 (inclusive) and [until] (exclusive).
      *
@@ -194,7 +194,7 @@ public abstract class Random {
     /**
      * Gets the next random `Double` from the random number generator in the specified range.
      *
-     * Generates a `Double` random value uniformly distributed between the specified [from] (inclusive) and the specified [until] (exclusive).
+     * Generates a `Double` random value uniformly distributed between the specified [from] (inclusive) and [until] (exclusive) bounds.
      *
      * [from] and [until] must be finite otherwise the behavior is unspecified.
      *
@@ -331,9 +331,9 @@ public fun Random(seed: Long): Random = XorWowRandom(seed.toInt(), seed.shr(32).
 public fun Random.nextUInt(): UInt = nextInt().toUInt()
 
 /**
- * Gets the next random [UInt] from the random number generator not greater than the specified [until].
+ * Gets the next random [UInt] from the random number generator not greater than the specified [until] bound.
  *
- * Generates a [UInt] random value uniformly distributed between `0` (inclusive) and the specified [until] (exclusive).
+ * Generates a [UInt] random value uniformly distributed between `0` (inclusive) and the specified [until] bound (exclusive).
  *
  * @throws IllegalArgumentException if [until] is zero.
  */
@@ -344,7 +344,7 @@ public fun Random.nextUInt(until: UInt): UInt = nextUInt(0u, until)
 /**
  * Gets the next random [UInt] from the random number generator in the specified range.
  *
- * Generates a [UInt] random value uniformly distributed between the specified [from] (inclusive) and the specified [until] (exclusive).
+ * Generates a [UInt] random value uniformly distributed between the specified [from] (inclusive) and [until] (exclusive) bounds.
  *
  * @throws IllegalArgumentException if [from] is greater than or equal to [until].
  */
@@ -388,9 +388,9 @@ public fun Random.nextUInt(range: UIntRange): UInt = when {
 public fun Random.nextULong(): ULong = nextLong().toULong()
 
 /**
- * Gets the next random [ULong] from the random number generator not greater than the specified [until].
+ * Gets the next random [ULong] from the random number generator not greater than the specified [until] bound.
  *
- * Generates a [ULong] random value uniformly distributed between `0` (inclusive) and the specified [until] (exclusive).
+ * Generates a [ULong] random value uniformly distributed between `0` (inclusive) and the specified [until] bound (exclusive).
  *
  * @throws IllegalArgumentException if [until] is zero.
  */
@@ -401,7 +401,7 @@ public fun Random.nextULong(until: ULong): ULong = nextULong(0uL, until)
 /**
  * Gets the next random [ULong] from the random number generator in the specified range.
  *
- * Generates a [ULong] random value uniformly distributed between the specified [from] (inclusive) and the specified [until] (exclusive).
+ * Generates a [ULong] random value uniformly distributed between the specified [from] (inclusive) and [until] (exclusive) bounds.
  *
  * @throws IllegalArgumentException if [from] is greater than or equal to [until].
  */
