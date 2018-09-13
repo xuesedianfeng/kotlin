@@ -42,24 +42,27 @@ object SMAPParser {
     fun parse(mappingInfo: String): SMAP {
         val fileMappings = linkedMapOf<Int, FileMapping>()
 
-        val fileSectionStart = mappingInfo.indexOf(SMAP.FILE_SECTION) + SMAP.FILE_SECTION.length
-        val lineSectionAnchor = mappingInfo.indexOf(SMAP.LINE_SECTION)
-        val files = mappingInfo.substring(fileSectionStart, lineSectionAnchor)
+        val fileSection = mappingInfo.substringBefore(SMAP.LINE_SECTION).substringAfter(SMAP.FILE_SECTION)
 
-        val fileEntries = files.trim().split('+')
+        val fileLines = fileSection.lineSequence()
 
-        for (fileDeclaration in fileEntries) {
-            if (fileDeclaration == "") continue
-            val fileInternalName = fileDeclaration.trim()
+        val iterator = fileLines.iterator()
+        while (iterator.hasNext()) {
+            val fileDeclaration = iterator.next().trim()
+            if (fileDeclaration.isEmpty()) continue
+            if (!fileDeclaration.startsWith('+')) {
+                throw AssertionError("File declaration should be in extended form, but: $fileDeclaration in $fileSection")
+            }
 
-            val indexEnd = fileInternalName.indexOf(' ')
-            val fileIndex = fileInternalName.substring(0, indexEnd).toInt()
-            val newLine = fileInternalName.indexOf('\n')
-            val fileName = fileInternalName.substring(indexEnd + 1, newLine)
-            fileMappings[fileIndex] = FileMapping(fileName, fileInternalName.substring(newLine + 1).trim())
+            val indexAndFileInternalName = fileDeclaration.substringAfter("+ ")
+            val indexEnd = indexAndFileInternalName.indexOf(' ')
+            val fileIndex = indexAndFileInternalName.substring(0, indexEnd).toInt()
+            val fileName = indexAndFileInternalName.substring(indexEnd + 1).trim()
+            val path = iterator.next().trim()
+            fileMappings[fileIndex] = FileMapping(fileName, path)
         }
 
-        val lines = mappingInfo.substring(lineSectionAnchor + SMAP.LINE_SECTION.length, mappingInfo.indexOf(SMAP.END)).trim().split('\n')
+        val lines = mappingInfo.substringAfter(SMAP.LINE_SECTION).substringBefore(SMAP.END).trim().split('\n')
         for (lineMapping in lines) {
             /*only simple mapping now*/
             val targetSplit = lineMapping.indexOf(':')

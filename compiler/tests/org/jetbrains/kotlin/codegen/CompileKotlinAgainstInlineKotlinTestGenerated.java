@@ -2841,6 +2841,16 @@ public class CompileKotlinAgainstInlineKotlinTestGenerated extends AbstractCompi
             runTest("compiler/testData/codegen/boxInline/smap/defaultFunction.kt");
         }
 
+        @TestMetadata("kt23369.kt")
+        public void testKt23369() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/smap/kt23369.kt");
+        }
+
+        @TestMetadata("kt23369_2.kt")
+        public void testKt23369_2() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/smap/kt23369_2.kt");
+        }
+
         @TestMetadata("oneFile.kt")
         public void testOneFile() throws Exception {
             runTest("compiler/testData/codegen/boxInline/smap/oneFile.kt");
