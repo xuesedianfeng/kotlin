@@ -247,11 +247,17 @@ abstract class InlineCodegen<out T : BaseExpressionCodegen>(
             }
         }
         val reificationResult = reifiedTypeInliner.reifyInstructions(node)
-        state.globalCoroutinesContext.pushArgumentIndexes(findInlineLambdasInsideMonitor(node))
+
+        val hasMonitor = node.instructions.asSequence().any { it.opcode == Opcodes.MONITORENTER }
+        if (hasMonitor) {
+            state.globalCoroutinesContext.pushArgumentIndexes(findInlineLambdasInsideMonitor(node))
+        }
         try {
             generateClosuresBodies()
         } finally {
-            state.globalCoroutinesContext.popArgumentIndexes()
+            if (hasMonitor) {
+                state.globalCoroutinesContext.popArgumentIndexes()
+            }
         }
 
         //through generation captured parameters will be added to invocationParamBuilder

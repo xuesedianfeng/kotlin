@@ -13,5 +13,10 @@ fun test() {
         inlineMe {
             suspensionPoint()
         }
+
+        monitorInFinally(
+            { suspensionPoint() },
+            { suspensionPoint() }
+        )
     }
 }

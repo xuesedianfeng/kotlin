@@ -141,7 +141,12 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
     }
 
     fun testSuspensionPointInMonitor() {
-        compileKotlin("source.kt", tmpdir, listOf(compileLibrary("library")))
+        compileKotlin(
+            "source.kt",
+            tmpdir,
+            listOf(compileLibrary("library", additionalOptions = listOf("-Xskip-metadata-version-check"))),
+            additionalOptions = listOf("-Xskip-metadata-version-check")
+        )
     }
 
     fun testDuplicateObjectInBinaryAndSources() {

@@ -5,3 +5,13 @@ inline fun inlineMe(c: () -> Unit) {
         c()
     }
 }
+
+inline fun monitorInFinally(a: () -> Unit, b: () -> Unit) {
+    try {
+        a()
+    } finally {
+        synchronized(lock) {
+            b()
+        }
+    }
+}
