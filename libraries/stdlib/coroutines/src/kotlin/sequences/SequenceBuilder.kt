@@ -24,8 +24,8 @@ import kotlin.coroutines.intrinsics.*
 public fun <T> sequence(builderAction: suspend SequenceScope<T>.() -> Unit): Sequence<T> = Sequence { iterator(builderAction) }
 
 @SinceKotlin("1.3")
-@Deprecated("Use sequence instead.", ReplaceWith("sequence(builderAction)"), level = DeprecationLevel.WARNING)
-public fun <T> buildSequence(builderAction: suspend SequenceBuilder<T>.() -> Unit): Sequence<T> = Sequence { iterator(builderAction) }
+@Deprecated("Use sequence instead.", ReplaceWith("sequence(builderAction)"), level = DeprecationLevel.ERROR)
+public fun <T> buildSequence(builderAction: suspend SequenceScope<T>.() -> Unit): Sequence<T> = Sequence { iterator(builderAction) }
 
 /**
  * Builds an [Iterator] lazily yielding values one by one.
@@ -41,8 +41,8 @@ public fun <T> iterator(builderAction: suspend SequenceScope<T>.() -> Unit): Ite
 }
 
 @SinceKotlin("1.3")
-@Deprecated("Use iterator instead.", ReplaceWith("iterator(builderAction)"), level = DeprecationLevel.WARNING)
-public fun <T> buildIterator(builderAction: suspend SequenceBuilder<T>.() -> Unit): Iterator<T> = iterator(builderAction)
+@Deprecated("Use iterator instead.", ReplaceWith("iterator(builderAction)"), level = DeprecationLevel.ERROR)
+public fun <T> buildIterator(builderAction: suspend SequenceScope<T>.() -> Unit): Iterator<T> = iterator(builderAction)
 
 /**
  * The scope for yielding values of a [Sequence] or an [Iterator], provides [yield] and [yieldAll] suspension functions.
@@ -93,7 +93,7 @@ public abstract class SequenceScope<in T> internal constructor() {
     public suspend fun yieldAll(sequence: Sequence<T>) = yieldAll(sequence.iterator())
 }
 
-@Deprecated("Use SequenceScope class instead.", ReplaceWith("SequenceScope<T>"))
+@Deprecated("Use SequenceScope class instead.", ReplaceWith("SequenceScope<T>"), level = DeprecationLevel.ERROR)
 public typealias SequenceBuilder<T> = SequenceScope<T>
 
 private typealias State = Int
